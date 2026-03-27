@@ -1,599 +1,365 @@
 ================================================================================
-                    MATERI PRESENTASI PROJEK UKK
-                 APLIKASI PARKIR - "PARKIEST/ARKIEST"
-               Framework: Laravel 12 + MySQL + Tailwind
+         MATERI LENGKAP - APLIKASI PARKIR "PARKIEST"
+         Projek UKK (Ujian Kompetensi Keahlian)
 ================================================================================
-
-DAFTAR ISI:
-1.  Gambaran Umum Projek
-2.  Struktur Database (Schema)
-3.  Arsitektur Aplikasi (MVC)
-4.  Sistem Autentikasi (Login)
-5.  Middleware & Keamanan (RBAC)
-6.  Model - Penjelasan Lengkap
-7.  Controller - Penjelasan Lengkap
-8.  Routes (Peta URL Aplikasi)
-9.  Views (Tampilan) - Penjelasan Lengkap
-10. Alur Kerja Sistem (Flow)
-11. File-File Penting untuk Presentasi
-12. Teknologi yang Digunakan
 
 ================================================================================
 1. GAMBARAN UMUM PROJEK
 ================================================================================
 
-Aplikasi ini adalah Sistem Manajemen Parkir berbasis web yang dibangun
-menggunakan framework Laravel 12. Aplikasi ini memiliki 3 role pengguna:
+Nama Aplikasi : Parkiest (Parking Management System)
+Tipe          : Aplikasi Web
+Framework     : Laravel 12 (PHP)
+Database      : MySQL (nama database: ukk_parkir)
+Frontend      : Blade Template + Tailwind CSS + Alpine.js
+Grafik        : Chart.js (diagram batang pendapatan)
+Font          : Plus Jakarta Sans (Google Fonts)
+Icon          : Font Awesome 6
 
-- ADMIN    : Mengelola user (CRUD), mengatur tarif, dan monitoring area parkir
-- PETUGAS  : Menginput kendaraan masuk/keluar, mencetak karcis, melihat riwayat
-- OWNER    : Melihat laporan pendapatan, grafik, dan monitoring traffic
+Parkiest adalah sistem manajemen parkir berbasis web yang dibangun
+menggunakan framework Laravel. Aplikasi ini mengelola seluruh siklus
+operasional parkir: mulai dari kendaraan masuk, pencatatan otomatis,
+monitoring slot real-time, sampai kendaraan keluar dan pembayaran.
 
-Fitur Utama:
-- Login multi-role (Admin, Petugas, Owner)
-- Manajemen kendaraan masuk & keluar real-time
-- Cetak karcis/struk otomatis
-- Perhitungan biaya parkir otomatis berdasarkan durasi
-- Dashboard monitoring area parkir dengan visualisasi slot
-- Laporan pendapatan dengan grafik (Chart.js)
-- Filter data berdasarkan tanggal
+Aplikasi ini punya 3 jenis akun (role) dengan hak akses berbeda:
+  1. Admin   → mengelola data master (user, tarif, area parkir)
+  2. Petugas → operasional harian (input masuk/keluar, cetak struk)
+  3. Owner   → pemantauan pendapatan, grafik, dan export laporan PDF
+
+Setiap role punya dashboard sendiri-sendiri yang hanya bisa diakses
+oleh role tersebut (dilindungi oleh middleware CheckRole).
 
 ================================================================================
-2. STRUKTUR DATABASE (SCHEMA)
+2. FITUR LENGKAP PER ROLE
 ================================================================================
 
-Nama Database: ukk_parkir
-File Schema  : schema.sql
+ADMIN (Master Data Management):
+  Dashboard Statistik:
+    - Stat Card: Pendapatan Hari Ini (total biaya kendaraan keluar hari ini)
+    - Stat Card: Total Petugas (jumlah akun petugas yang terdaftar)
+    - Stat Card: Sisa Slot Parkir (kapasitas - terisi, semua area dijumlahkan)
+    - Stat Card: Transaksi Hari Ini (jumlah transaksi masuk hari ini)
+  
+  Tab "Data User":
+    - Tabel semua user (kecuali admin yang login)
+    - Tombol Tambah User → modal popup → isi nama, username, password, role
+    - Tombol Edit → modal popup → ubah data user
+    - Tombol Hapus → konfirmasi → hapus user dari database
+    - Toggle Aktif/Nonaktif → user yang dinonaktifkan tidak bisa login
 
-Tabel-tabel yang digunakan:
+  Tab "Tarif & Area":
+    - Daftar Tarif:
+      → Tabel jenis kendaraan + harga per jam
+      → Tombol Tambah Tarif → modal popup → isi jenis + harga
+      → Tombol Edit → ubah harga per jam
+    - Daftar Area Parkir:
+      → Card per area: nama, kapasitas, terisi, progress bar
+      → Tombol Tambah Area → modal popup → isi nama + kapasitas
+      → Tombol Edit → ubah nama/kapasitas
+      → Toggle Enable/Disable → area nonaktif kapasitasnya jadi 0
 
---- 2.1 tb_user ---
-Menyimpan data pengguna sistem.
-Kolom:
-  - id_user       : Primary Key, auto increment
-  - nama_lengkap  : Nama lengkap pengguna (VARCHAR 100)
-  - username      : Username untuk login, harus unik (VARCHAR 50)
-  - password      : Password disimpan dalam format MD5 (VARCHAR 255)
-  - role          : Peran pengguna, pilihan: 'admin', 'petugas', 'owner'
-  - status_aktif  : Status akun, 1 = Aktif, 0 = Nonaktif (TINYINT)
+  Tab "Log Aktivitas":
+    - Tabel 20 transaksi terbaru (plat, area, waktu, status, biaya)
 
-Penjelasan:
-  Password menggunakan enkripsi MD5. Contoh: password "admin123" akan
-  disimpan sebagai "0192023a7bbd73250516f069df18b500".
-  Field role menggunakan tipe ENUM yang membatasi isi hanya 3 pilihan.
-  Field status_aktif memungkinkan admin menonaktifkan akun tanpa menghapusnya.
+PETUGAS (Operator Lapangan):
+  - Jam digital real-time (update setiap detik)
+  - Tanggal hari ini dalam bahasa Indonesia
 
---- 2.2 tb_tarif ---
-Menyimpan tarif parkir per jenis kendaraan.
-Kolom:
-  - id_tarif        : Primary Key
-  - jenis_kendaraan : Jenis kendaraan (misal: motor, mobil)
-  - tarif_per_jam   : Harga parkir per jam dalam Rupiah
+  Tab "Masuk":
+    - Dropdown pilihan jenis kendaraan (dari tabel tarif)
+    - Dropdown pilihan area parkir (hanya yang masih ada slot)
+    - Input plat nomor (otomatis huruf kapital, hapus spasi)
+    - Tombol "Cetak Karcis" → proses masuk + auto-print struk
+    - Validasi: cek dobel parkir + cek slot penuh
 
-Penjelasan:
-  Tabel ini sederhana, hanya menyimpan jenis dan harga. Saat kendaraan
-  masuk, sistem akan mengambil tarif dari sini untuk menghitung biaya.
+  Tab "Keluar":
+    - Input plat nomor kendaraan yang mau keluar
+    - Otomatis tampilkan: info kendaraan, durasi parkir, biaya
+    - Modal konfirmasi pembayaran → proses bayar → auto-print struk LUNAS
 
---- 2.3 tb_area_parkir ---
-Menyimpan data area/zona parkir.
-Kolom:
-  - id_area    : Primary Key
-  - nama_area  : Nama area (misal: Lantai 1, Blok A)
-  - kapasitas  : Total slot yang tersedia
-  - terisi     : Jumlah slot yang sedang terpakai
+  Tab "Parkir":
+    - Daftar kendaraan yang SEDANG PARKIR (live, real-time)
+    - Info per kendaraan: plat, jenis, waktu masuk, durasi, estimasi biaya
+    - Estimasi biaya dihitung otomatis setiap detik (JavaScript)
 
-Penjelasan:
-  Kolom "terisi" akan bertambah 1 saat kendaraan masuk (increment),
-  dan berkurang 1 saat kendaraan keluar (decrement).
-  Slot kosong dihitung: kapasitas - terisi.
+  Tab "Aktivitas":
+    - Riwayat transaksi berdasarkan tanggal (bisa difilter)
+    - Tabel: plat, jenis, area, status, waktu masuk, waktu keluar, biaya
 
---- 2.4 tb_kendaraan ---
-Menyimpan identitas kendaraan yang pernah parkir.
-Kolom:
-  - id_kendaraan    : Primary Key
-  - plat_nomor      : Nomor plat kendaraan
-  - jenis_kendaraan : Motor atau mobil
-  - warna           : Warna kendaraan
-  - pemilik         : Nama pemilik kendaraan
-  - id_user         : Foreign Key ke tb_user (petugas yang mendaftarkan)
+  Tab "Area":
+    - Denah visual slot parkir per area
+    - Dropdown pilih area → tampil grid slot (hijau = kosong, merah = terisi)
+    - Progress bar kapasitas terpakai
 
-Penjelasan:
-  Tabel ini memisahkan data kendaraan dari transaksi. Satu kendaraan
-  bisa memiliki banyak transaksi parkir (relasi one-to-many).
+  Struk:
+    - Karcis Masuk → struk thermal 80mm, otomatis print
+    - Struk Keluar → struk pembayaran dengan stempel LUNAS
 
---- 2.5 tb_transaksi ---
-Tabel utama transaksi parkir.
-Kolom:
-  - id_parkir    : Primary Key
-  - id_kendaraan : Foreign Key ke tb_kendaraan
-  - id_tarif     : Foreign Key ke tb_tarif
-  - id_area      : Foreign Key ke tb_area_parkir
-  - id_user      : Foreign Key ke tb_user (petugas yang melayani)
-  - waktu_masuk  : Waktu kendaraan masuk (DATETIME)
-  - waktu_keluar : Waktu kendaraan keluar (DATETIME, nullable)
-  - durasi_jam   : Lama parkir dalam jam
-  - biaya_total  : Total biaya yang harus dibayar
-  - status       : 'masuk' atau 'keluar'
+OWNER (Pemilik Bisnis):
+  - Stat Card: Total Pendapatan (dalam periode yang dipilih)
+  - Stat Card: Total Kendaraan (dalam periode)
+  - Stat Card: Total Petugas terdaftar
+  - Stat Card: Total Area parkir
 
-Penjelasan:
-  Saat kendaraan masuk: status='masuk', waktu_keluar=NULL, biaya_total=0
-  Saat kendaraan keluar: status='keluar', waktu_keluar diisi, durasi &
-  biaya dihitung otomatis.
+  - Filter Tanggal: pilih periode awal-akhir → klik "Sinkronkan Data"
+  - Grafik Batang: pendapatan 7 hari terakhir (Chart.js)
+  - Tabel Rincian Pendapatan: 10 transaksi terakhir yang sudah bayar
+  - Tabel Log Aktivitas: 12 transaksi terbaru
+  - Slot Area: daftar area + kapasitas + progress bar
 
---- 2.6 tb_log_aktivitas & tb_log ---
-Tabel pencatatan aktivitas sistem (untuk audit trail).
+  Export PDF:
+    - Tombol "Export PDF" → buka popup window
+    - Halaman laporan rapi dengan logo, tabel lengkap, ringkasan
+    - Klik Print (Ctrl+P) → pilih "Save as PDF"
+
+================================================================================
+3. DATABASE (8 TABEL)
+================================================================================
+
+Nama database: ukk_parkir
+File schema: schema.sql (di root folder projek)
+
+TABEL 1: tb_user (Data Akun Pengguna)
+  - id_user (INT, PK, Auto Increment) → ID unik setiap user
+  - nama_lengkap (VARCHAR 100) → Nama lengkap user
+  - username (VARCHAR 50, UNIQUE) → Username untuk login
+  - password (VARCHAR 255) → Password sudah di-hash MD5
+  - role (ENUM: admin, petugas, owner) → Jenis akun
+  - status_aktif (TINYINT, Default: 1) → 1=aktif, 0=dinonaktifkan
+
+TABEL 2: tb_tarif (Harga Parkir)
+  - id_tarif (INT, PK, Auto Increment) → ID unik tarif
+  - jenis_kendaraan (VARCHAR 50) → Motor, Mobil, dll
+  - tarif_per_jam (DECIMAL 10,2) → Harga per jam
+
+TABEL 3: tb_area_parkir (Area/Zona Parkir)
+  - id_area (INT, PK, Auto Increment) → ID unik area
+  - nama_area (VARCHAR 100) → Nama area (misal: Gedung A)
+  - kapasitas (INT) → Total slot tersedia (0 = nonaktif)
+  - terisi (INT) → Jumlah slot yang sedang dipakai
+
+TABEL 4: tb_kendaraan (Data Kendaraan)
+  - id_kendaraan (INT, PK, Auto Increment) → ID unik kendaraan
+  - plat_nomor (VARCHAR 20) → Plat nomor (misal: B1234ABC)
+  - jenis_kendaraan (VARCHAR 50) → Motor/Mobil
+  - warna (VARCHAR 50) → Warna kendaraan
+  - pemilik (VARCHAR 100) → Nama pemilik
+  - id_user (INT, FK → tb_user) → Petugas yang pertama kali input
+
+TABEL 5: tb_transaksi (Transaksi Parkir)
+  - id_parkir (INT, PK, Auto Increment) → ID unik transaksi
+  - id_kendaraan (INT, FK → tb_kendaraan)
+  - id_tarif (INT, FK → tb_tarif)
+  - id_area (INT, FK → tb_area_parkir)
+  - id_user (INT, FK → tb_user) → Petugas yang menangani
+  - waktu_masuk (DATETIME)
+  - waktu_keluar (DATETIME, Nullable) → kosong kalau belum keluar
+  - durasi_jam (INT, Nullable) → dihitung saat keluar
+  - biaya_total (DECIMAL, Nullable) → dihitung saat keluar
+  - status (ENUM: masuk, keluar) → status transaksi
+
+TABEL 6: tb_log_aktivitas (Log Aktivitas User)
+  - id_log (INT, PK) → ID log
+  - id_user (INT, FK → tb_user) → User yang melakukan aktivitas
+  - aktivitas (TEXT) → Deskripsi aktivitas
+  - waktu (DATETIME) → Waktu aktivitas
+
+TABEL 7: tb_log (Log Tambahan)
+  - id_log (INT, PK) → ID log
+  - id_user (INT, FK → tb_user)
+  - aksi (VARCHAR 255) → Jenis aksi
+  - detail (TEXT) → Detail aksi
+  - created_at (DATETIME)
+
+TABEL 8: sessions (Session Laravel)
+  - id (VARCHAR, PK) → Session ID
+  - user_id, ip_address, user_agent, payload, last_activity
 
 RELASI ANTAR TABEL:
-  tb_transaksi.id_kendaraan -> tb_kendaraan.id_kendaraan
-  tb_transaksi.id_tarif     -> tb_tarif.id_tarif
-  tb_transaksi.id_area      -> tb_area_parkir.id_area
-  tb_transaksi.id_user      -> tb_user.id_user
-  tb_kendaraan.id_user      -> tb_user.id_user
+  tb_transaksi → id_kendaraan → tb_kendaraan
+  tb_transaksi → id_tarif → tb_tarif
+  tb_transaksi → id_area → tb_area_parkir
+  tb_transaksi → id_user → tb_user
+  tb_kendaraan → id_user → tb_user
 
 ================================================================================
-3. ARSITEKTUR APLIKASI (MVC)
+4. ARSITEKTUR MVC (MODEL - VIEW - CONTROLLER)
 ================================================================================
 
-Laravel menggunakan pola MVC (Model-View-Controller):
+MVC adalah pola desain yang memisahkan aplikasi jadi 3 bagian:
 
-MODEL (app/Models/)
-  = Representasi tabel database di dalam kode PHP
-  = Mengatur relasi antar tabel
-  = Contoh: Model User.php merepresentasikan tabel tb_user
+MODEL (app/Models/) → Penghubung ke Database
+  Setiap tabel di database punya 1 model.
+  Model menentukan:
+  - Tabel mana yang dihubungkan ($table)
+  - Kolom mana yang boleh diisi ($fillable)
+  - Relasi antar tabel (belongsTo, hasMany)
+  
+  Contoh di projek:
+    User.php      → tb_user
+    Tarif.php     → tb_tarif
+    Area.php      → tb_area_parkir
+    Kendaraan.php → tb_kendaraan
+    Transaksi.php → tb_transaksi
 
-VIEW (resources/views/)
-  = Tampilan yang dilihat user di browser
-  = Menggunakan Blade Template Engine (file .blade.php)
-  = Contoh: login.blade.php adalah halaman login
+VIEW (resources/views/) → Tampilan HTML
+  File-file Blade (.blade.php) yang menghasilkan HTML.
+  Blade Template punya fitur khusus:
+    {{ $variabel }}     → cetak variabel
+    @foreach ... @endforeach → looping
+    @if ... @endif      → kondisi
+    @extends, @section  → template inheritance
 
-CONTROLLER (app/Http/Controllers/)
-  = Otak logika aplikasi
-  = Menerima request dari user, memproses data, mengembalikan response
-  = Contoh: PetugasController menangani logika parkir masuk/keluar
+CONTROLLER (app/Http/Controllers/) → Logika/Otak Aplikasi
+  Setiap role punya controller sendiri:
+    AdminController.php   → logika halaman admin
+    PetugasController.php → logika halaman petugas
+    OwnerController.php   → logika halaman owner
 
-ALUR KERJA MVC:
-  1. User membuka URL (misal: /petugas/dashboard)
-  2. Routes (routes/web.php) mencocokkan URL ke Controller
-  3. Controller mengambil data dari Model (database)
-  4. Controller mengirim data ke View (blade template)
-  5. View menampilkan halaman HTML ke browser user
+ROUTES (routes/web.php) → Peta URL
+  Menentukan URL mana ditangani oleh fungsi Controller mana.
 
-================================================================================
-4. SISTEM AUTENTIKASI (LOGIN)
-================================================================================
-
-FILE: app/Http/Requests/Auth/LoginRequest.php
-
-Cara kerja login:
-  1. User memasukkan username dan password di form login
-  2. Sistem mencari user di tabel tb_user berdasarkan username
-  3. Password yang diketik user di-hash dengan MD5
-  4. Hash MD5 dibandingkan dengan password di database
-  5. Jika cocok, user di-login-kan dan diarahkan ke dashboard sesuai role
-  6. Jika tidak cocok, muncul pesan error
-
-Kode penting (LoginRequest.php):
-----------------------------------------------------------------------
-  public function authenticate(): void
-  {
-      $user = User::where('username', $this->username)->first();
-
-      if (!$user || md5($this->password) !== $user->password) {
-          throw ValidationException::withMessages([
-              'username' => trans('auth.failed'),
-          ]);
-      }
-
-      Auth::login($user, $this->boolean('remember'));
-  }
-----------------------------------------------------------------------
-Penjelasan baris per baris:
-  - Baris 1: Cari user di database berdasarkan username yang diketik
-  - Baris 3: Cek apakah user ditemukan DAN password MD5-nya cocok
-             md5('admin123') = '0192023a7bbd73250516f069df18b500'
-  - Baris 4-6: Jika gagal, lempar error "Username atau password salah"
-  - Baris 8: Jika berhasil, login-kan user ke sistem Laravel
-
-FILE: app/Http/Controllers/Auth/AuthenticatedSessionController.php
-Setelah login berhasil, controller ini mengecek status_aktif:
-----------------------------------------------------------------------
-  if ($request->user()->status_aktif == 0) {
-      Auth::guard('web')->logout();
-      return redirect()->route('login')->withErrors([
-          'username' => 'Akun Anda telah dinonaktifkan oleh Admin.',
-      ]);
-  }
-
-  $role = $request->user()->role;
-  return match ($role) {
-      'admin'   => redirect()->route('admin.dashboard'),
-      'petugas' => redirect()->route('petugas.dashboard'),
-      'owner'   => redirect()->route('owner.dashboard'),
-  };
-----------------------------------------------------------------------
-Penjelasan:
-  - Cek apakah akun masih aktif (status_aktif = 1)
-  - Jika nonaktif, logout paksa dan tampilkan pesan error
-  - Jika aktif, arahkan ke dashboard sesuai role (admin/petugas/owner)
-
-FILE VIEW: resources/views/auth/login.blade.php
-  - Form login dengan input username dan password
-  - Menggunakan animasi mobil dan palang parkir (CSS animation)
-  - Tampilan split-screen: kiri animasi, kanan form login
+ALUR KERJA:
+  Browser → URL → Routes → Controller → Model → Database
+  Database → Model → Controller → View → Browser
 
 ================================================================================
-5. MIDDLEWARE & KEAMANAN (RBAC)
+5. SISTEM AUTENTIKASI (LOGIN/LOGOUT)
 ================================================================================
 
-RBAC = Role-Based Access Control (Kontrol Akses Berdasarkan Peran)
+File-file terkait:
+  - resources/views/auth/login.blade.php → Halaman login (form)
+  - app/Http/Requests/Auth/LoginRequest.php → Proses autentikasi MD5
+  - app/Http/Controllers/Auth/AuthenticatedSessionController.php → Setelah login
 
-FILE: app/Http/Middleware/CheckRole.php
-----------------------------------------------------------------------
-  public function handle(Request $request, Closure $next, ...$roles)
-  {
-      if (!Auth::check()) {
-          return redirect('login');
-      }
+ALUR LOGIN:
+  1. User buka /login → tampil halaman login (form username + password)
+  2. User isi form → klik LOGIN → data dikirim ke server (POST)
+  3. LoginRequest menerima data → validasi (wajib diisi)
+  4. Cari user di database berdasarkan username
+  5. Hash password yang diketik pakai MD5
+  6. Bandingkan hash dengan password di database
+  7. Kalau COCOK → login berhasil → cek status_aktif
+  8. Kalau status_aktif = 0 → paksa logout + pesan error
+  9. Kalau status_aktif = 1 → redirect ke dashboard sesuai role
 
-      if (in_array(Auth::user()->role, $roles)) {
-          return $next($request);
-      }
-
-      return redirect()->route(Auth::user()->role . '.dashboard')
-                       ->with('error', 'Anda tidak memiliki akses.');
-  }
-----------------------------------------------------------------------
-Penjelasan:
-  - Parameter ...$roles menerima daftar role yang diizinkan
-  - Langkah 1: Cek apakah user sudah login, jika belum redirect ke login
-  - Langkah 2: Cek apakah role user ada di daftar yang diizinkan
-  - Langkah 3: Jika tidak punya akses, redirect ke dashboard miliknya
-
-Contoh penggunaan di routes/web.php:
-  Route::middleware(['auth', 'role:admin']) -> hanya admin yang bisa akses
-  Route::middleware(['auth', 'role:petugas']) -> hanya petugas yang bisa akses
-
-FILE: bootstrap/app.php
-  Mendaftarkan middleware 'role' agar bisa dipakai di routes:
-  $middleware->alias(['role' => CheckRole::class]);
+KEAMANAN:
+  - Password dienkripsi MD5 (tidak disimpan dalam bentuk asli)
+  - Rate limiting: maksimal 5x gagal login → blokir sementara
+  - Session regeneration: mencegah session fixation attack
+  - CSRF Token: mencegah pemalsuan form
 
 ================================================================================
-6. MODEL - PENJELASAN LENGKAP
+6. MIDDLEWARE KEAMANAN (RBAC)
 ================================================================================
 
---- 6.1 User.php (app/Models/User.php) ---
-----------------------------------------------------------------------
-  protected $table = 'tb_user';           // Nama tabel di database
-  protected $primaryKey = 'id_user';      // Kolom primary key
-  public $timestamps = false;             // Tidak pakai created_at/updated_at
+File: app/Http/Middleware/CheckRole.php
 
-  protected $fillable = [                 // Kolom yang boleh diisi massal
-      'nama_lengkap', 'username', 'password', 'role', 'status_aktif',
-  ];
-----------------------------------------------------------------------
-Penjelasan:
-  - $table: Memberitahu Laravel nama tabel yang dipakai (default: 'users')
-  - $primaryKey: Memberitahu kolom ID (default: 'id')
-  - $timestamps: Laravel biasanya otomatis mengisi created_at & updated_at,
-    kita matikan karena tabel kita tidak punya kolom tersebut
-  - $fillable: Daftar kolom yang boleh diisi dengan mass assignment
-    (keamanan agar kolom sensitif tidak bisa dimanipulasi)
+RBAC = Role-Based Access Control (kontrol akses berdasarkan role)
 
---- 6.2 Kendaraan.php (app/Models/Kendaraan.php) ---
-----------------------------------------------------------------------
-  protected $table = 'tb_kendaraan';
-  protected $primaryKey = 'id_kendaraan';
+Middleware ini berjalan SEBELUM halaman dibuka. Seperti satpam:
+  1. Cek: sudah login? → kalau belum, tendang ke /login
+  2. Cek: role-nya boleh akses? → kalau boleh, lanjut buka halaman
+  3. Kalau tidak boleh → redirect ke dashboard sendiri + pesan error
 
-  public function user() {
-      return $this->belongsTo(User::class, 'id_user', 'id_user');
-  }
-  public function transaksis() {
-      return $this->hasMany(Transaksi::class, 'id_kendaraan', 'id_kendaraan');
-  }
-----------------------------------------------------------------------
-Penjelasan relasi:
-  - belongsTo(User) = "Kendaraan ini DIMILIKI OLEH satu User (petugas)"
-    Artinya: satu kendaraan didaftarkan oleh satu petugas
-  - hasMany(Transaksi) = "Kendaraan ini MEMILIKI BANYAK Transaksi"
-    Artinya: satu kendaraan bisa parkir berkali-kali
-
---- 6.3 Transaksi.php (app/Models/Transaksi.php) ---
-----------------------------------------------------------------------
-  protected $table = 'tb_transaksi';
-  protected $primaryKey = 'id_parkir';
-
-  public function kendaraan() {
-      return $this->belongsTo(Kendaraan::class, 'id_kendaraan', 'id_kendaraan');
-  }
-  public function tarif() {
-      return $this->belongsTo(Tarif::class, 'id_tarif', 'id_tarif');
-  }
-  public function area() {
-      return $this->belongsTo(Area::class, 'id_area', 'id_area');
-  }
-  public function user() {
-      return $this->belongsTo(User::class, 'id_user', 'id_user');
-  }
-----------------------------------------------------------------------
-Penjelasan:
-  Model Transaksi punya 4 relasi belongsTo karena satu transaksi
-  terhubung ke: 1 kendaraan, 1 tarif, 1 area, dan 1 user (petugas).
-
---- 6.4 Tarif.php & Area.php ---
-  Sama polanya: mendefinisikan $table, $primaryKey, $fillable.
-  Area memiliki kolom 'terisi' yang di-increment/decrement saat
-  kendaraan masuk/keluar.
+Contoh:
+  Petugas coba buka /admin/dashboard
+  → CheckRole cek: role 'petugas' ada di daftar ['admin']?
+  → TIDAK → redirect ke /petugas/dashboard
 
 ================================================================================
-7. CONTROLLER - PENJELASAN LENGKAP
+7. ALUR KERJA PARKIR LENGKAP
 ================================================================================
 
---- 7.1 AdminController.php ---
-FILE: app/Http/Controllers/Admin/AdminController.php
+KENDARAAN MASUK:
+  1. Petugas pilih jenis kendaraan (Motor/Mobil) dari dropdown
+  2. Petugas pilih area parkir dari dropdown (hanya yang masih ada slot)
+  3. Petugas input plat nomor kendaraan
+  4. Klik tombol "Cetak Karcis"
+  5. Sistem VALIDASI:
+     a. Cek: plat nomor sudah diisi? Jenis sudah dipilih? Area sudah dipilih?
+     b. Cek: kendaraan dengan plat ini masih parkir di dalam?
+        → Kalau iya → TOLAK (tidak bisa masuk 2x)
+     c. Cek: area yang dipilih masih ada slot kosong?
+        → Kalau penuh → TOLAK
+  6. Sistem SIMPAN:
+     a. Cari/buat data kendaraan di database (firstOrCreate)
+     b. Buat transaksi baru (status: 'masuk', waktu_masuk: sekarang)
+     c. Tambah slot terisi di area +1 (increment)
+  7. Auto-print KARCIS MASUK (struk thermal 80mm)
 
-Method index() - Menampilkan dashboard admin:
-  - Mengambil semua user (petugas & owner)
-  - Mengambil semua tarif dan area
-  - Mengirim data ke view dashboards/admin.blade.php
-
-Method store() - Menambah user baru:
-  1. Validasi input (nama, username unik, password min 6 karakter)
-  2. Password di-hash dengan md5() sebelum disimpan
-  3. Simpan user baru ke database
-  4. Redirect balik dengan pesan sukses
-
-Method update() - Edit data user:
-  1. Cari user berdasarkan ID
-  2. Validasi input (username harus unik, kecuali milik user ini sendiri)
-  3. Update data, password hanya diubah jika diisi
-  4. Simpan perubahan
-
-Method toggleStatus() - Aktifkan/Nonaktifkan akun:
-  - Membalik nilai status_aktif (1 jadi 0, 0 jadi 1)
-  - User yang dinonaktifkan tidak bisa login
-
-Method updateTarif() - Mengubah tarif parkir:
-  - Validasi harga baru
-  - Update kolom tarif_per_jam
-
---- 7.2 PetugasController.php ---
-FILE: app/Http/Controllers/Petugas/PetugasController.php
-
-Method index() - Dashboard petugas:
-  - Mengambil semua tarif untuk dropdown
-  - Mengambil area yang masih ada slot kosong
-  - Mengambil daftar kendaraan yang sedang parkir (status='masuk')
-  - Mengambil riwayat transaksi berdasarkan tanggal filter
-
-Method kendaraanMasuk() - Proses kendaraan masuk:
-----------------------------------------------------------------------
-  1. Validasi input (plat nomor, tarif, area)
-  2. Cek apakah plat nomor sudah ada yang parkir (cegah duplikat)
-  3. Cek apakah area masih ada slot kosong
-  4. Simpan/cari data kendaraan di tb_kendaraan (firstOrCreate)
-  5. Buat transaksi baru dengan status='masuk'
-  6. Tambah kolom 'terisi' di area (+1)
-  7. Redirect dengan flash session untuk cetak karcis
-----------------------------------------------------------------------
-Kode penting:
-  $kendaraan = Kendaraan::firstOrCreate(
-      ['plat_nomor' => $platNomor],       // Cari berdasarkan ini
-      ['jenis_kendaraan' => ..., ...]     // Buat baru jika tidak ketemu
-  );
-Penjelasan firstOrCreate:
-  Kalau kendaraan dengan plat itu sudah pernah parkir, pakai data lama.
-  Kalau belum pernah, buat data kendaraan baru.
-
-Method kendaraanKeluar() - Proses kendaraan keluar:
-----------------------------------------------------------------------
-  1. Cari transaksi aktif berdasarkan plat nomor
-  2. Hitung durasi parkir (waktu keluar - waktu masuk)
-  3. Update transaksi: waktu_keluar, durasi_jam, biaya_total, status='keluar'
-  4. Kurangi kolom 'terisi' di area (-1)
-  5. Redirect dengan flash session 'terbayar' untuk menampilkan struk LUNAS
-----------------------------------------------------------------------
-
-Method cetakKarcis() - Cetak struk masuk:
-  - Mengambil data transaksi beserta relasi (kendaraan, area, tarif)
-  - Menampilkan halaman cetak yang otomatis membuka dialog print
-
---- 7.3 OwnerController.php ---
-FILE: app/Http/Controllers/Owner/OwnerController.php
-
-Method index() - Dashboard owner:
-  - Menerima filter tanggal dari request (start_date, end_date)
-  - Menghitung total pendapatan dalam periode tersebut
-  - Menghitung total kendaraan dalam periode
-  - Mengambil 10 rincian pendapatan terakhir
-  - Menyiapkan data untuk grafik Chart.js (7 hari terakhir)
+KENDARAAN KELUAR:
+  1. Petugas input plat nomor kendaraan yang mau keluar
+  2. JavaScript otomatis cari data: tampilkan jenis, waktu masuk, durasi, biaya
+  3. Klik tombol "Proses Pembayaran"
+  4. Muncul modal konfirmasi: total biaya yang harus dibayar
+  5. Klik "Bayar" → sistem PROSES:
+     a. Hitung durasi parkir (waktu masuk → waktu sekarang, minimal 1 jam)
+     b. Hitung biaya (durasi × tarif per jam, dibulatkan ke atas)
+     c. Update transaksi: isi waktu_keluar, durasi, biaya, status = 'keluar'
+     d. Kurangi slot terisi di area -1 (decrement)
+  6. Auto-print STRUK KELUAR (struk pembayaran dengan stempel LUNAS)
 
 ================================================================================
-8. ROUTES (PETA URL APLIKASI)
-================================================================================
-
-FILE: routes/web.php
-
-URL                          | Method | Fungsi
------------------------------|--------|----------------------------------
-GET  /                       |   -    | Redirect ke dashboard sesuai role
-GET  /login                  |  GET   | Tampilkan form login
-POST /login                  |  POST  | Proses login
-POST /logout                 |  POST  | Proses logout
-GET  /petugas/dashboard      |  GET   | Dashboard petugas
-POST /petugas/kendaraan-masuk|  POST  | Input kendaraan masuk
-POST /petugas/kendaraan-keluar| POST  | Proses pembayaran & keluar
-GET  /petugas/cetak/{id}     |  GET   | Cetak karcis masuk
-GET  /admin/dashboard        |  GET   | Dashboard admin
-POST /admin/users            |  POST  | Tambah user baru
-PUT  /admin/users/{id}       |  PUT   | Edit user
-PATCH /admin/users/{id}/toggle| PATCH | Toggle aktif/nonaktif user
-PUT  /admin/tarifs/{id}      |  PUT   | Update tarif
-PUT  /admin/areas/{id}       |  PUT   | Update area
-GET  /owner/dashboard        |  GET   | Dashboard owner
-
-Penjelasan Middleware pada Routes:
-  - 'auth' = User harus sudah login
-  - 'role:admin' = Hanya role admin yang boleh akses
-  - 'role:petugas' = Hanya role petugas yang boleh akses
-  - 'role:owner' = Hanya role owner yang boleh akses
-
-================================================================================
-9. VIEWS (TAMPILAN) - PENJELASAN LENGKAP
-================================================================================
-
---- 9.1 login.blade.php ---
-FILE: resources/views/auth/login.blade.php
-  - Form login dengan field: username, password
-  - Animasi CSS: mobil bergerak melewati palang parkir
-  - Menggunakan @vite untuk memuat CSS & JS
-  - Error ditampilkan dalam kotak merah di atas form
-
---- 9.2 admin.blade.php ---
-FILE: resources/views/dashboards/admin.blade.php
-  - Menggunakan Alpine.js untuk tab navigation tanpa reload halaman
-  - Tab 1 "Manajemen User": tabel daftar user + modal tambah/edit
-  - Tab 2 "Tarif & Area": pengaturan tarif + monitoring area (progress bar)
-  - Modal menggunakan Alpine.js (x-show, x-data, @click)
-
-Teknologi UI: Alpine.js untuk interaktivitas, Tailwind CSS untuk styling
-
---- 9.3 petugas.blade.php ---
-FILE: resources/views/dashboards/petugas.blade.php
-  - Jam & tanggal real-time (JavaScript setInterval)
-  - 4 Tab: Masuk, Keluar, Aktivitas, Area
-  - Tab Masuk: Form input + preview karcis live
-  - Tab Keluar: Pencarian plat nomor real-time (Alpine.js)
-  - Tab Aktivitas: Tabel riwayat transaksi + filter tanggal
-  - Tab Area: Visualisasi slot parkir (grid hijau/merah)
-
-Fitur pencarian plat (cariKendaraan):
-  - Menggunakan JavaScript/Alpine.js di sisi client
-  - Mencocokkan plat yang diketik dengan daftar kendaraan aktif
-  - Menghitung durasi dan total biaya secara otomatis
-  - Menampilkan struk LUNAS dengan animasi stamp
-
---- 9.4 owner.blade.php ---
-FILE: resources/views/dashboards/owner.blade.php
-  - Filter periode (start_date, end_date)
-  - 3 kartu statistik: Pendapatan, Kendaraan, Staff Aktif
-  - Grafik batang menggunakan Chart.js
-  - Daftar 10 transaksi pendapatan terakhir
-  - Monitor traffic: grid kartu kendaraan masuk/keluar
-
---- 9.5 cetak.blade.php ---
-FILE: resources/views/petugas/cetak.blade.php
-  - Format struk thermal printer (80mm)
-  - Otomatis membuka dialog cetak (window.print)
-  - Menampilkan: nomor tiket, plat, jenis, area, petugas, tarif
-
-================================================================================
-10. ALUR KERJA SISTEM (FLOW)
-================================================================================
-
---- ALUR KENDARAAN MASUK ---
-  1. Petugas buka Tab "Masuk" di dashboard
-  2. Pilih jenis kendaraan (motor/mobil) dari dropdown
-  3. Pilih area parkir yang tersedia
-  4. Ketik plat nomor kendaraan
-  5. Klik "CETAK KARCIS"
-  6. Sistem membuat data kendaraan (jika belum ada)
-  7. Sistem membuat transaksi baru (status: masuk)
-  8. Slot area bertambah 1 (terisi + 1)
-  9. Karcis otomatis dicetak di tab baru
-
---- ALUR KENDARAAN KELUAR ---
-  1. Petugas buka Tab "Keluar"
-  2. Ketik plat nomor kendaraan
-  3. Sistem mencari data di daftar kendaraan aktif (JavaScript)
-  4. Otomatis menampilkan: waktu masuk, durasi, total biaya
-  5. Klik "PROSES PEMBAYARAN"
-  6. Modal muncul: total tagihan, input jumlah bayar, kembalian
-  7. Klik "Bayar" jika uang cukup
-  8. Sistem update transaksi (status: keluar, waktu_keluar, biaya)
-  9. Slot area berkurang 1 (terisi - 1)
-  10. Struk pembayaran tampil dengan stamp "LUNAS"
-
---- ALUR ADMIN KELOLA USER ---
-  1. Admin login -> masuk dashboard Admin
-  2. Tab "Manajemen User" tampil
-  3. Klik "+ TAMBAH AKUN" -> isi form -> Simpan
-  4. Klik icon Edit -> ubah data -> Simpan
-  5. Klik icon Toggle -> aktifkan/nonaktifkan akun
-
---- ALUR OWNER LIHAT LAPORAN ---
-  1. Owner login -> masuk dashboard Owner
-  2. Pilih periode tanggal (start - end)
-  3. Klik "Sinkronkan Data"
-  4. Dashboard menampilkan: pendapatan, grafik, rincian
-
-================================================================================
-11. FILE-FILE PENTING UNTUK PRESENTASI
-================================================================================
-
-Saat presentasi, tunjukkan file-file ini secara berurutan:
-
-TAHAP 1 - DATABASE:
-  [x] schema.sql
-      -> Jelaskan struktur tabel dan relasi antar tabel
-
-TAHAP 2 - BACKEND (Logika):
-  [x] app/Models/User.php          -> Contoh model, jelaskan $table, $fillable
-  [x] app/Models/Transaksi.php     -> Jelaskan relasi belongsTo
-  [x] app/Models/Kendaraan.php     -> Jelaskan model baru & relasi
-  [x] routes/web.php               -> Jelaskan peta URL & middleware
-  [x] app/Http/Middleware/CheckRole.php -> Jelaskan keamanan RBAC
-  [x] app/Http/Requests/Auth/LoginRequest.php -> Jelaskan proses login MD5
-  [x] app/Http/Controllers/Auth/AuthenticatedSessionController.php -> Redirect role
-  [x] app/Http/Controllers/Petugas/PetugasController.php -> Logika utama parkir
-  [x] app/Http/Controllers/Admin/AdminController.php -> CRUD user & tarif
-  [x] app/Http/Controllers/Owner/OwnerController.php -> Laporan & grafik
-
-TAHAP 3 - FRONTEND (Tampilan):
-  [x] resources/views/auth/login.blade.php -> Form login + animasi
-  [x] resources/views/dashboards/petugas.blade.php -> Dashboard terlengkap
-  [x] resources/views/dashboards/admin.blade.php -> Dashboard admin
-  [x] resources/views/dashboards/owner.blade.php -> Dashboard owner + Chart.js
-  [x] resources/views/petugas/cetak.blade.php -> Struk cetak
-
-TAHAP 4 - KONFIGURASI:
-  [x] .env -> Konfigurasi database, session driver
-  [x] bootstrap/app.php -> Registrasi middleware
-
-================================================================================
-12. TEKNOLOGI YANG DIGUNAKAN
+8. TEKNOLOGI YANG DIPAKAI
 ================================================================================
 
 Backend:
-  - PHP 8.4           : Bahasa pemrograman utama
-  - Laravel 12        : Framework PHP untuk web development
-  - MySQL/MariaDB     : Database relasional
+  - PHP 8.4 → bahasa pemrograman server-side
+  - Laravel 12 → framework PHP modern yang pakai pola MVC
+  - Eloquent ORM → query database tanpa nulis SQL manual
+  - Middleware → filter keamanan sebelum halaman dibuka
 
 Frontend:
-  - Blade Template    : Template engine bawaan Laravel
-  - Tailwind CSS      : Framework CSS untuk styling
-  - Alpine.js         : Library JavaScript ringan untuk interaktivitas
-  - Chart.js          : Library JavaScript untuk membuat grafik
-  - Font Awesome      : Library icon
+  - Blade Template → template engine Laravel ({{ }}, @foreach, dll)
+  - Tailwind CSS → framework CSS utility-first untuk styling
+  - Alpine.js → library JavaScript ringan untuk interaktivitas (tab, modal, toggle)
+  - Chart.js → library JavaScript untuk membuat grafik/diagram
 
-Tools:
-  - Composer          : Package manager untuk PHP
-  - NPM               : Package manager untuk JavaScript
-  - Vite              : Build tool untuk asset frontend
-  - DBngin            : Local MySQL server
-  - Sequel Ace        : GUI client untuk MySQL
-
-Konsep Pemrograman:
-  - MVC Pattern       : Model-View-Controller
-  - RBAC              : Role-Based Access Control
-  - Middleware         : Filter request sebelum masuk controller
-  - Eloquent ORM      : Object Relational Mapping untuk database
-  - Blade Directives  : @extends, @section, @foreach, @if, dll
-  - Mass Assignment   : $fillable untuk keamanan input data
-  - Foreign Key       : Relasi antar tabel di database
+Database & Tools:
+  - MySQL / MariaDB → database relasional
+  - Vite → build tool untuk compile CSS & JavaScript
+  - Composer → package manager PHP (install library)
+  - NPM → package manager JavaScript (install library frontend)
 
 ================================================================================
-AKUN DEFAULT UNTUK DEMO:
-  Username: admin    | Password: admin123 | Role: Admin
-  Username: petugas  | Password: admin123 | Role: Petugas
-  Username: owner    | Password: admin123 | Role: Owner
+9. FILE-FILE PENTING DALAM PROJEK
+================================================================================
+
+CONTROLLER (Logika):
+  app/Http/Controllers/Admin/AdminController.php
+  app/Http/Controllers/Petugas/PetugasController.php
+  app/Http/Controllers/Owner/OwnerController.php
+  app/Http/Controllers/Auth/AuthenticatedSessionController.php
+
+MIDDLEWARE (Keamanan):
+  app/Http/Middleware/CheckRole.php
+
+REQUEST (Validasi Login):
+  app/Http/Requests/Auth/LoginRequest.php
+
+MODEL (Database):
+  app/Models/User.php
+  app/Models/Tarif.php
+  app/Models/Area.php
+  app/Models/Kendaraan.php
+  app/Models/Transaksi.php
+
+VIEW (Tampilan):
+  resources/views/auth/login.blade.php
+  resources/views/dashboards/admin.blade.php
+  resources/views/dashboards/petugas.blade.php
+  resources/views/dashboards/owner.blade.php
+  resources/views/petugas/cetak.blade.php
+  resources/views/petugas/cetak_keluar.blade.php
+  resources/views/owner/laporan_pdf.blade.php
+
+ROUTES:
+  routes/web.php
+
+DATABASE:
+  schema.sql (di root folder)
+
+KONFIGURASI:
+  .env (konfigurasi database, session, dll)
 ================================================================================

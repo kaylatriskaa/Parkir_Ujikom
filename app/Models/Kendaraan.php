@@ -1,4 +1,7 @@
 <?php
+// FILE: Kendaraan.php (Model)
+// FUNGSI: Penghubung ke tabel tb_kendaraan di database.
+//         Menyimpan data kendaraan yang pernah parkir (plat, jenis, warna, pemilik).
 
 namespace App\Models;
 
@@ -21,11 +24,13 @@ class Kendaraan extends Model
         'id_user',
     ];
 
+    // Relasi: kendaraan ini dicatat oleh 1 user (petugas)
     public function user()
     {
         return $this->belongsTo(User::class, 'id_user', 'id_user');
     }
 
+    // Relasi: 1 kendaraan bisa punya banyak transaksi parkir
     public function transaksis()
     {
         return $this->hasMany(Transaksi::class, 'id_kendaraan', 'id_kendaraan');

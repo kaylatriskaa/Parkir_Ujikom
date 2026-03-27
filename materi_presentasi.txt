@@ -1,542 +1,314 @@
 ================================================================================
          PANDUAN PRESENTASI UKK - APLIKASI PARKIR "PARKIEST"
+         Ikuti urutan ini saat presentasi
 ================================================================================
 
-Halo! File ini berisi panduan lengkap untuk presentasi UKK kamu.
-Ikuti urutan di bawah ini saat presentasi. Setiap bagian sudah ada
-penjelasan kode per baris yang gampang banget dipahami.
-
 ================================================================================
-URUTAN PRESENTASI (Ikuti dari atas ke bawah!)
+LANGKAH 1: JELASKAN GAMBARAN UMUM
 ================================================================================
 
-LANGKAH 1: Jelaskan Gambaran Umum Projek
-LANGKAH 2: Tunjukkan Database (schema.sql)
-LANGKAH 3: Tunjukkan Halaman Login + Kode Login
-LANGKAH 4: Tunjukkan Middleware Keamanan (CheckRole)
-LANGKAH 5: Tunjukkan Model-Model (jelaskan relasi tabel)
-LANGKAH 6: Tunjukkan Routes (peta URL)
-LANGKAH 7: Demo Login sebagai Petugas → Input Masuk → Input Keluar
-LANGKAH 8: Demo Login sebagai Admin → Kelola User & Tarif
-LANGKAH 9: Demo Login sebagai Owner → Lihat Laporan
-LANGKAH 10: Jelaskan Teknologi yang Dipakai
+Bilang:
+"Projek saya adalah Sistem Manajemen Parkir bernama Parkiest,
+ dibangun pakai framework Laravel 12 dengan database MySQL.
+ Aplikasi ini punya 3 role user:
+ - Admin → kelola data master (user, tarif, area)
+ - Petugas → operasional harian (input masuk/keluar, cetak struk)
+ - Owner → pantau pendapatan, lihat grafik, export laporan PDF
+ Setiap role punya dashboard sendiri dan dilindungi middleware keamanan."
 
 ================================================================================
-LANGKAH 1: GAMBARAN UMUM
-================================================================================
-
-"Projek saya adalah Sistem Manajemen Parkir berbasis web. Dibangun
- pakai framework Laravel 12 dengan database MySQL. Ada 3 role user:
- Admin, Petugas, dan Owner. Masing-masing punya dashboard sendiri."
-
-Fitur-fitur:
- - Login multi-role (3 jenis akun berbeda)
- - Input kendaraan masuk & keluar
- - Cetak karcis/struk otomatis
- - Hitung biaya parkir otomatis dari durasi
- - Monitoring slot parkir real-time
- - Laporan pendapatan + grafik
- - Filter data berdasarkan tanggal
-
-================================================================================
-LANGKAH 2: DATABASE
+LANGKAH 2: TUNJUKKAN DATABASE (schema.sql)
 ================================================================================
 
 Buka file: schema.sql
 
-"Database saya namanya ukk_parkir, ada 7 tabel:"
+Bilang:
+"Database saya namanya ukk_parkir, ada 8 tabel:"
 
-1. tb_user         -> nyimpen data akun (admin, petugas, owner)
-2. tb_tarif        -> nyimpen harga parkir (motor 2rb, mobil 5rb)
-3. tb_area_parkir  -> nyimpen area parkir (Lantai 1, Blok A, dll)
-4. tb_kendaraan    -> nyimpen data kendaraan yang pernah parkir
-5. tb_transaksi    -> nyimpen semua transaksi parkir
-6. tb_log_aktivitas -> nyimpen log aktivitas user
-7. tb_log          -> log tambahan
+1. tb_user → data akun pengguna
+   Kolom penting: username (untuk login), password (di-hash MD5), role, status_aktif
 
-"Tabel-tabel ini saling terhubung pakai Foreign Key. Contohnya
- tb_transaksi terhubung ke tb_kendaraan, tb_tarif, tb_area_parkir,
- dan tb_user. Jadi satu transaksi punya info lengkap."
+2. tb_tarif → harga parkir per jenis kendaraan
+   Contoh: Motor Rp 2.000/jam, Mobil Rp 5.000/jam
+
+3. tb_area_parkir → area/zona parkir
+   Kolom: nama_area, kapasitas (total slot), terisi (slot yang sudah dipakai)
+   Kalau kapasitas = 0 berarti area dinonaktifkan
+
+4. tb_kendaraan → data kendaraan yang pernah parkir
+   Plat nomor, jenis, warna, pemilik
+
+5. tb_transaksi → TABEL UTAMA: semua transaksi parkir
+   Terhubung ke 4 tabel lain (kendaraan, tarif, area, user)
+   Kolom status: 'masuk' (belum bayar) atau 'keluar' (sudah bayar)
+
+6-8. tb_log_aktivitas, tb_log, sessions → log dan session
+
+"Tabel-tabel saling terhubung pakai Foreign Key.
+ Contoh: tb_transaksi punya id_kendaraan yang mengarah ke tb_kendaraan."
 
 ================================================================================
-LANGKAH 3: HALAMAN LOGIN + KODE
+LANGKAH 3: TUNJUKKAN HALAMAN LOGIN + JELASKAN KODE
 ================================================================================
+
+DEMO: Buka browser → http://127.0.0.1:8000
+Tunjukkan halaman login dengan animasi mobil melewati palang parkir.
 
 Buka file: resources/views/auth/login.blade.php
 
-"Ini halaman login. Ada animasi mobil lewat palang parkir pakai CSS.
- Form-nya cuma minta username sama password."
+Bilang:
+"Ini halaman login. Ada form dengan input username dan password."
 
---- Penjelasan kode login.blade.php (bagian penting) ---
+Tunjukkan bagian form:
+  <form method="POST" action="{{ route('login') }}">
+      @csrf
+      <input type="text" name="username">
+      <input type="password" name="password">
+      <button type="submit">LOG IN</button>
+  </form>
 
-<form method="POST" action="{{ route('login') }}" class="space-y-4">
-    @csrf
-    <input type="text" name="username" placeholder="Username" required>
-    <input type="password" name="password" placeholder="Password" required>
-    <button type="submit">LOG IN</button>
-</form>
-
-Penjelasan gampang:
-- method="POST"     = Kirim data secara aman (gak keliatan di URL)
-- action="{{ route('login') }}"  = Kirim form ke URL /login
-- @csrf              = Token keamanan Laravel, biar form gak bisa
-                       dipalsuin sama hacker (wajib ada di setiap form!)
-- name="username"    = Nama field ini "username", nanti di PHP diambil
-                       pakai $request->username
-- required           = Wajib diisi, kalo kosong gak bisa submit
-
------
+Jelaskan:
+  - method="POST" → kirim data secara aman, gak keliatan di URL
+  - @csrf → token keamanan Laravel, mencegah serangan pemalsuan form
+  - name="username" → ini nama field-nya, nanti di PHP diambil pakai $request->username
 
 Buka file: app/Http/Requests/Auth/LoginRequest.php
 
-"Ini file yang ngurus proses login. Cara kerjanya:"
+Bilang:
+"Ini file yang memproses login. Cara kerjanya:"
 
---- Penjelasan kode LoginRequest.php per baris ---
+Tunjukkan fungsi authenticate():
+  $user = User::where('username', $this->username)->first();
+  → "Cari user di database berdasarkan username yang diketik"
 
-public function rules(): array
-{
-    return [
-        'username' => ['required', 'string'],   // username wajib diisi, harus teks
-        'password' => ['required', 'string'],   // password wajib diisi, harus teks
-    ];
-}
+  if (!$user || md5($this->password) !== $user->password)
+  → "Bandingkan password: yang diketik di-hash MD5 dulu,
+     lalu dicocokkan dengan hash yang ada di database.
+     Contoh: md5('admin123') = '0192023a...'
+     Di database juga '0192023a...' → COCOK → login berhasil"
 
-// Ini aturan validasi. Kalo user gak isi username atau password,
-// Laravel otomatis tolak dan kasih pesan error.
+  Auth::login($user)
+  → "Kalau cocok, masukkan user ke session (login berhasil)"
 
-public function authenticate(): void
-{
-    $this->ensureIsNotRateLimited();
-    // ^ Cek dulu, kalo udah salah login 5x, diblock sementara
-    //   biar orang gak bisa brute-force (coba-coba terus)
-
-    $user = User::where('username', $this->username)->first();
-    // ^ Cari user di tabel tb_user yang username-nya sama
-    //   dengan yang diketik. first() = ambil 1 data pertama.
-    //   Kalo gak ketemu, $user = null.
-
-    if (!$user || md5($this->password) !== $user->password) {
-    // ^ Cek 2 hal:
-    //   1. !$user = user gak ketemu di database? GAGAL
-    //   2. md5($this->password) = password yang diketik di-hash MD5,
-    //      terus dibandingin sama password di database.
-    //      Kalo beda? GAGAL
-    //
-    //   Contoh: user ketik "admin123"
-    //   md5("admin123") = "0192023a7bbd73250516f069df18b500"
-    //   Yang di database juga "0192023a7bbd73250516f069df18b500"
-    //   Cocok! Berarti password benar.
-
-        RateLimiter::hit($this->throttleKey());
-        // ^ Catat gagal login (nanti kalo udah 5x, diblock)
-
-        throw ValidationException::withMessages([
-            'username' => trans('auth.failed'),
-        ]);
-        // ^ Lempar error "Username atau password salah"
-    }
-
-    Auth::login($user, $this->boolean('remember'));
-    // ^ BERHASIL! Login-kan user ke sistem Laravel.
-    //   Mulai sekarang Auth::user() = user yang barusan login.
-
-    RateLimiter::clear($this->throttleKey());
-    // ^ Reset hitungan gagal login ke 0
-}
-
------
+Tunjukkan rate limiting:
+  → "Kalau gagal login 5 kali, akun diblokir sementara.
+     Ini untuk mencegah serangan brute force."
 
 Buka file: app/Http/Controllers/Auth/AuthenticatedSessionController.php
 
-"Setelah login berhasil, sistem cek lagi status akunnya:"
+Bilang:
+"Setelah login berhasil, controller ini yang menentukan mau diarahkan ke mana:"
 
---- Penjelasan kode per baris ---
+  if ($request->user()->status_aktif == 0)
+  → "Cek dulu: kalau akun dinonaktifkan admin, paksa logout"
 
-public function store(LoginRequest $request): RedirectResponse
-{
-    $request->authenticate();
-    // ^ Jalankan proses login yang tadi (cek username + MD5 password)
-
-    if ($request->user()->status_aktif == 0) {
-    // ^ Cek kolom status_aktif di database.
-    //   0 = akun dinonaktifkan sama admin
-    //   1 = akun masih aktif
-
-        Auth::guard('web')->logout();
-        // ^ Logout paksa, gak boleh masuk
-
-        return redirect()->route('login')->withErrors([
-            'username' => 'Akun Anda telah dinonaktifkan oleh Admin.',
-        ]);
-        // ^ Balik ke halaman login, tampilkan pesan error
-    }
-
-    $request->session()->regenerate();
-    // ^ Bikin session ID baru (keamanan, biar gak bisa dibajak)
-
-    $role = $request->user()->role;
-    // ^ Ambil role user yang login (admin/petugas/owner)
-
-    return match ($role) {
-        'admin'   => redirect()->route('admin.dashboard'),
-        'petugas' => redirect()->route('petugas.dashboard'),
-        'owner'   => redirect()->route('owner.dashboard'),
-    };
-    // ^ Arahkan ke dashboard sesuai role-nya.
-    //   Kalo admin -> ke /admin/dashboard
-    //   Kalo petugas -> ke /petugas/dashboard
-    //   Kalo owner -> ke /owner/dashboard
-}
+  return match ($role) {
+      'admin' → redirect ke /admin/dashboard
+      'petugas' → redirect ke /petugas/dashboard
+      'owner' → redirect ke /owner/dashboard
+  }
+  → "Redirect ke dashboard sesuai role-nya"
 
 ================================================================================
-LANGKAH 4: MIDDLEWARE KEAMANAN
+LANGKAH 4: TUNJUKKAN MIDDLEWARE KEAMANAN
 ================================================================================
 
 Buka file: app/Http/Middleware/CheckRole.php
 
-"Ini middleware buat ngecek hak akses. Misalnya petugas gak boleh
- buka halaman admin, dan sebaliknya."
+Bilang:
+"Ini middleware keamanan, fungsinya kayak satpam digital.
+ Sebelum halaman dibuka, middleware ini cek:
+ 1. Sudah login belum?
+ 2. Role-nya boleh akses halaman ini gak?
+ Kalau gak boleh → ditendang ke dashboard-nya sendiri."
 
---- Penjelasan kode per baris ---
+Tunjukkan kode:
+  if (!Auth::check()) → return redirect('login')
+  → "Belum login? Tendang ke halaman login"
 
-public function handle(Request $request, Closure $next, ...$roles)
-// $request = data dari browser (URL yang dibuka, cookie, dll)
-// $next    = lanjutkan ke halaman yang dituju
-// ...$roles = daftar role yang boleh akses (bisa lebih dari 1)
-//
-// Contoh pemakaian: middleware('role:admin')
-// Berarti $roles = ['admin']
-// Contoh: middleware('role:admin,petugas')
-// Berarti $roles = ['admin', 'petugas']
-{
-    if (!Auth::check()) {
-        return redirect('login');
-    }
-    // ^ Kalo belum login sama sekali, tendang ke halaman login
+  if (in_array(Auth::user()->role, $roles)) → return $next($request)
+  → "Role-nya ada di daftar yang diizinkan? Boleh lewat"
 
-    if (in_array(Auth::user()->role, $roles)) {
-        return $next($request);
-    }
-    // ^ Cek: apakah role user yang login ada di daftar yang diizinkan?
-    //   in_array('admin', ['admin']) = true = BOLEH LEWAT
-    //   in_array('petugas', ['admin']) = false = GAK BOLEH
-    //   $next($request) = oke lanjut, buka halamannya
-
-    return redirect()->route(Auth::user()->role . '.dashboard')
-                     ->with('error', 'Anda tidak memiliki akses.');
-    // ^ Kalo gak punya akses, redirect ke dashboard-nya sendiri
-    //   Contoh: petugas coba buka /admin/dashboard
-    //   -> ditendang ke /petugas/dashboard + pesan error
-}
+  → "Kalau gak boleh, redirect ke dashboard sesuai role sendiri"
 
 ================================================================================
-LANGKAH 5: MODEL (PENGHUBUNG KE DATABASE)
+LANGKAH 5: TUNJUKKAN MODEL + RELASI
 ================================================================================
-
-"Model itu kayak 'jembatan' antara kode PHP dan tabel database.
- Setiap tabel punya 1 model."
 
 Buka file: app/Models/Transaksi.php
 
---- Penjelasan kode per baris ---
+Bilang:
+"Model ini penghubung ke tabel tb_transaksi di database."
 
-class Transaksi extends Model
-// Bikin class Transaksi yang mewarisi kemampuan dari Model Laravel.
-// Dengan ini kita bisa query database tanpa nulis SQL manual.
-{
-    protected $table = 'tb_transaksi';
-    // ^ Kasih tau Laravel: "Model ini terhubung ke tabel tb_transaksi"
-    //   Kalo gak ditulis, Laravel nyari tabel bernama "transaksis" (default)
+Tunjukkan:
+  protected $table = 'tb_transaksi'    → "Model ini terhubung ke tabel ini"
+  protected $primaryKey = 'id_parkir'  → "Primary key bukan 'id' tapi 'id_parkir'"
+  protected $fillable = [...]          → "Kolom yang boleh diisi dari form"
 
-    protected $primaryKey = 'id_parkir';
-    // ^ Kasih tau: "Kolom ID utama-nya bukan 'id', tapi 'id_parkir'"
-
-    public $timestamps = false;
-    // ^ Matikan fitur timestamps. Biasanya Laravel otomatis isi
-    //   kolom created_at dan updated_at. Tapi tabel kita gak punya
-    //   kolom itu, jadi dimatikan biar gak error.
-
-    protected $fillable = [
-        'id_kendaraan', 'id_tarif', 'id_area', 'id_user',
-        'waktu_masuk', 'waktu_keluar', 'durasi_jam',
-        'biaya_total', 'status',
-    ];
-    // ^ Daftar kolom yang BOLEH diisi pakai mass assignment.
-    //   Mass assignment = isi banyak kolom sekaligus.
-    //   Contoh: Transaksi::create([...]) <- isi semua kolom sekaligus
-    //   Ini fitur keamanan! Kolom yang GAK ada di sini gak bisa diisi
-    //   dari luar, jadi hacker gak bisa manipulasi kolom sensitif.
-
-    public function kendaraan()
-    {
-        return $this->belongsTo(Kendaraan::class, 'id_kendaraan', 'id_kendaraan');
-    }
-    // ^ RELASI: "Transaksi ini DIMILIKI oleh 1 Kendaraan"
-    //   belongsTo = relasi "milik siapa?"
-    //   Parameter 1: Model yang dituju (Kendaraan)
-    //   Parameter 2: Foreign key di tabel ini (id_kendaraan)
-    //   Parameter 3: Primary key di tabel tujuan (id_kendaraan)
-    //
-    //   Cara pakai: $transaksi->kendaraan->plat_nomor
-    //   Artinya: dari transaksi ini, ambil data kendaraannya,
-    //   lalu ambil plat_nomor-nya.
-
-    public function tarif() { ... }   // Sama kayak di atas, ke tabel tb_tarif
-    public function area() { ... }    // Ke tabel tb_area_parkir
-    public function user() { ... }    // Ke tabel tb_user
-}
-
-Buka file: app/Models/Kendaraan.php
-
-    public function transaksis()
-    {
-        return $this->hasMany(Transaksi::class, 'id_kendaraan', 'id_kendaraan');
-    }
-    // ^ RELASI: "Kendaraan ini PUNYA BANYAK Transaksi"
-    //   hasMany = relasi "punya banyak apa?"
-    //   1 kendaraan bisa parkir berkali-kali = banyak transaksi
+  public function kendaraan() {
+      return $this->belongsTo(Kendaraan::class, 'id_kendaraan');
+  }
+  → "Relasi: transaksi ini DIMILIKI oleh 1 kendaraan.
+     Cara pakainya: $transaksi->kendaraan->plat_nomor"
 
 ================================================================================
-LANGKAH 6: ROUTES (PETA URL)
+LANGKAH 6: TUNJUKKAN ROUTES
 ================================================================================
 
 Buka file: routes/web.php
 
-"File ini kayak 'peta' yang nentuin URL mana dihandle Controller apa."
+Bilang:
+"Ini peta URL aplikasi. Menentukan URL mana ditangani controller mana."
 
---- Penjelasan kode per baris ---
+Tunjukkan contoh:
+  Route::middleware(['auth', 'role:petugas'])->prefix('petugas')
+  → "Semua URL /petugas/... hanya bisa diakses role petugas"
 
-Route::middleware(['auth', 'role:petugas'])->prefix('petugas')->name('petugas.')->group(function () {
-// ^ Penjelasan:
-//   middleware(['auth', 'role:petugas'])
-//     = yang buka harus sudah LOGIN + role-nya PETUGAS
-//   prefix('petugas')
-//     = semua URL di dalem ini diawali /petugas/...
-//   name('petugas.')
-//     = semua nama route diawali "petugas." (buat bikin link)
-//   group(function () { ... })
-//     = kelompokin route-route di dalamnya
+  Route::post('/kendaraan-masuk', [PetugasController::class, 'kendaraanMasuk'])
+  → "Kalau ada POST ke /petugas/kendaraan-masuk, panggil fungsi kendaraanMasuk()"
 
-    Route::get('/dashboard', [PetugasController::class, 'index'])->name('dashboard');
-    // ^ GET /petugas/dashboard -> jalankan method index() di PetugasController
-    //   name('dashboard') -> nama lengkapnya jadi "petugas.dashboard"
-    //   Di blade bisa dipanggil: route('petugas.dashboard')
-
-    Route::post('/kendaraan-masuk', [PetugasController::class, 'kendaraanMasuk'])->name('masuk');
-    // ^ POST /petugas/kendaraan-masuk -> jalankan method kendaraanMasuk()
-    //   POST = kirim data (dari form), bukan buka halaman
-
-    Route::post('/kendaraan-keluar', [PetugasController::class, 'kendaraanKeluar'])->name('keluar');
-    Route::get('/cetak/{id}', [PetugasController::class, 'cetakKarcis'])->name('cetak');
-    // ^ {id} = parameter dinamis. Contoh: /petugas/cetak/5
-    //   Angka 5 itu id transaksi, masuk ke parameter $id di controller
-});
+  Route::get('/cetak/{id}', ...)
+  → "URL /petugas/cetak/5 → {id} jadi 5 → buka halaman cetak transaksi ID 5"
 
 ================================================================================
-LANGKAH 7: DEMO PETUGAS (Kendaraan Masuk & Keluar)
+LANGKAH 7: DEMO SEBAGAI PETUGAS
 ================================================================================
+
+Login sebagai: petugas / admin123
+
+DEMO 1 - Kendaraan Masuk:
+  1. Pilih jenis kendaraan: Motor
+  2. Pilih area: Gedung A
+  3. Ketik plat: B1234ABC
+  4. Klik "Cetak Karcis"
+  → Tunjukkan karcis yang otomatis muncul
 
 Buka file: app/Http/Controllers/Petugas/PetugasController.php
 
---- Penjelasan kode kendaraanMasuk() per baris ---
+Jelaskan fungsi kendaraanMasuk():
+  $platNomor = strtoupper(str_replace(' ', '', ...))
+  → "Bersihkan plat: hapus spasi, huruf kapital"
 
-public function kendaraanMasuk(Request $request)
-{
-    $request->validate([
-        'plat_nomor' => 'required|string',
-        'id_tarif'   => 'required',
-        'id_area'    => 'required',
-    ]);
-    // ^ Validasi: semua field wajib diisi.
-    //   Kalo ada yang kosong, Laravel otomatis tolak + kasih error.
+  $cekParkir = Transaksi::whereHas('kendaraan', ...)
+  → "Cek dobel: apakah kendaraan ini masih parkir di dalam?"
 
-    $platNomor = strtoupper(str_replace(' ', '', $request->plat_nomor));
-    // ^ Bersihkan plat nomor:
-    //   str_replace(' ', '', ...) = hapus semua spasi
-    //   strtoupper() = jadikan huruf besar semua
-    //   "b 1234 abc" -> "B1234ABC"
+  $kendaraan = Kendaraan::firstOrCreate(...)
+  → "Cari kendaraan di database, kalau belum ada buat baru"
 
-    $cekParkir = Transaksi::whereHas('kendaraan', function ($q) use ($platNomor) {
-        $q->where('plat_nomor', $platNomor);
-    })->where('status', 'masuk')->first();
-    // ^ Cek di database: adakah transaksi AKTIF dengan plat ini?
-    //   whereHas('kendaraan') = cari lewat relasi kendaraan
-    //   where('status', 'masuk') = yang statusnya masih "masuk"
-    //   Kalo ada = kendaraan ini masih di dalam, gak boleh masuk lagi!
+  $area->increment('terisi')
+  → "Tambah slot terisi +1 di area"
 
-    if ($cekParkir) {
-        return redirect()->back()->with('error', 'Kendaraan masih ada di dalam!');
-    }
-    // ^ Kalo ketemu, tolak. Kasih pesan error.
+DEMO 2 - Kendaraan Keluar:
+  1. Pindah ke tab "Keluar"
+  2. Ketik plat: B1234ABC
+  3. Otomatis tampil info + biaya
+  4. Klik "Proses Pembayaran" → struk LUNAS muncul
 
-    $area = Area::find($request->id_area);
-    if (!$area || $area->terisi >= $area->kapasitas) {
-        return redirect()->back()->with('error', 'Slot di area ini sudah penuh!');
-    }
-    // ^ Cek slot: kalo "terisi" udah sama dengan "kapasitas" = PENUH
+Jelaskan fungsi kendaraanKeluar():
+  $durasi = max(1, $waktuMasuk->diffInHours($waktuKeluar))
+  → "Hitung durasi parkir dalam jam, minimal 1 jam"
 
-    $kendaraan = Kendaraan::firstOrCreate(
-        ['plat_nomor' => $platNomor],
-        [
-            'jenis_kendaraan' => $tarif->jenis_kendaraan,
-            'warna' => '-',
-            'pemilik' => '-',
-            'id_user' => Auth::id(),
-        ]
-    );
-    // ^ firstOrCreate = CARI dulu, kalo GAK ADA baru BIKIN BARU
-    //   Parameter 1: cari berdasarkan plat_nomor
-    //   Parameter 2: data untuk bikin baru (kalo belum ada)
-    //   Jadi kalo mobil B1234ABC udah pernah parkir sebelumnya,
-    //   gak bikin data kendaraan baru, pakai yang lama aja.
+  $transaksi->update([...'status' => 'keluar'])
+  → "Update transaksi: isi waktu keluar, durasi, biaya, status jadi keluar"
 
-    $transaksi = Transaksi::create([
-        'id_kendaraan' => $kendaraan->id_kendaraan,
-        'id_tarif'     => $tarif->id_tarif,
-        'id_area'      => $request->id_area,
-        'id_user'      => Auth::id(),
-        'waktu_masuk'  => Carbon::now(),
-        'status'       => 'masuk',
-    ]);
-    // ^ Bikin transaksi baru di database.
-    //   Auth::id() = ID user yang lagi login (petugasnya)
-    //   Carbon::now() = waktu sekarang (tanggal + jam)
-    //   status = 'masuk' (nanti berubah jadi 'keluar' pas bayar)
+  $area->decrement('terisi')
+  → "Kurangi slot terisi -1 di area"
 
-    $area->increment('terisi');
-    // ^ Tambah kolom "terisi" di area + 1
-    //   Misal: terisi = 5 -> jadi 6
-    //   Artinya 1 slot lagi keisi sama kendaraan ini
-}
-
---- Penjelasan kode kendaraanKeluar() per baris ---
-
-public function kendaraanKeluar(Request $request)
-{
-    $transaksi = Transaksi::whereHas('kendaraan', function ($q) use ($platInput) {
-        $q->where('plat_nomor', $platInput);
-    })->where('status', 'masuk')->first();
-    // ^ Cari transaksi AKTIF berdasarkan plat nomor
-
-    $waktuMasuk  = Carbon::parse($transaksi->waktu_masuk);
-    $waktuKeluar = Carbon::now();
-    $durasi = max(1, $waktuMasuk->diffInHours($waktuKeluar, true) ?: 1);
-    // ^ Hitung durasi parkir:
-    //   Carbon::parse() = ubah string waktu jadi objek waktu
-    //   diffInHours() = hitung selisih jam antara masuk dan keluar
-    //   max(1, ...) = minimal 1 jam (biar gak gratis kalo cuma 5 menit)
-
-    $transaksi->update([
-        'waktu_keluar' => $waktuKeluar,
-        'durasi_jam'   => ceil($durasi),
-        'biaya_total'  => $request->total_tagihan,
-        'status'       => 'keluar',
-    ]);
-    // ^ Update transaksi:
-    //   waktu_keluar = diisi waktu sekarang
-    //   durasi_jam = berapa jam parkir (dibulatkan ke atas)
-    //   biaya_total = total yang dibayar
-    //   status = berubah dari 'masuk' jadi 'keluar'
-
-    $area->decrement('terisi');
-    // ^ Kurangi kolom "terisi" di area - 1
-    //   Misal: terisi = 6 -> jadi 5
-    //   Artinya 1 slot kosong lagi
-}
+DEMO 3 - Tab Parkir:
+  → Tunjukkan daftar kendaraan yang sedang parkir (live)
 
 ================================================================================
-LANGKAH 8: DEMO ADMIN
+LANGKAH 8: DEMO SEBAGAI ADMIN
 ================================================================================
 
-Buka file: app/Http/Controllers/Admin/AdminController.php
+Login sebagai: admin / admin123
 
-Fungsi-fungsi admin:
-- index()        = Tampilkan dashboard (daftar user, tarif, area)
-- store()        = Tambah user baru (password di-md5 sebelum disimpan)
-- update()       = Edit data user
-- toggleStatus() = Aktifkan/Nonaktifkan akun
-- updateTarif()  = Ubah harga tarif parkir
+DEMO:
+  1. Tunjukkan 4 stat card (pendapatan, petugas, slot, transaksi)
+  2. Tab "Data User":
+     - Tambah user baru → isi form → submit
+     - Toggle aktif/nonaktif user
+  3. Tab "Tarif & Area":
+     - Tambah tarif baru (misal: Truk Rp 10.000)
+     - Tambah area baru → isi nama + kapasitas
+     - Toggle enable/disable area
+  4. Tab "Log Aktivitas" → tabel 20 transaksi terbaru
 
---- Penjelasan kode store() (Tambah User) ---
+Jelaskan dari AdminController.php:
+  User::create(['password' => md5($request->password)])
+  → "Password HARUS di-hash MD5 sebelum disimpan"
 
-User::create([
-    'nama_lengkap' => $request->nama_lengkap,
-    'username'     => $request->username,
-    'password'     => md5($request->password),  // <-- di-hash MD5!
-    'role'         => $request->role,
-]);
-// ^ Bikin user baru. Password GABOLEH disimpan langsung!
-//   Harus di-hash dulu pakai md5() biar aman.
+  $user->status_aktif = !$user->status_aktif
+  → "Tanda ! artinya kebalikan. 1 jadi 0, 0 jadi 1"
 
---- Penjelasan kode toggleStatus() ---
-
-$user->status_aktif = !$user->status_aktif;
-// ^ Tanda ! artinya kebalikan.
-//   Kalo sebelumnya 1 (aktif) -> jadi 0 (nonaktif)
-//   Kalo sebelumnya 0 (nonaktif) -> jadi 1 (aktif)
-//   Simpel tapi powerful!
+  Area::create(['terisi' => 0])
+  → "Area baru, terisi 0 karena belum ada kendaraan"
 
 ================================================================================
-LANGKAH 9: DEMO OWNER
+LANGKAH 9: DEMO SEBAGAI OWNER
 ================================================================================
 
-Buka file: app/Http/Controllers/Owner/OwnerController.php
+Login sebagai: owner / admin123
 
-"Owner bisa lihat laporan pendapatan, filter per tanggal, dan
- lihat grafik pendapatan 7 hari terakhir."
+DEMO:
+  1. Tunjukkan dashboard pendapatan + statistik
+  2. Filter tanggal → klik "Sinkronkan Data"
+  3. Tunjukkan grafik pendapatan 7 hari (Chart.js)
+  4. Tunjukkan tabel rincian pendapatan
+  5. Klik "Export PDF" → popup muncul → Print → Save as PDF
 
---- Penjelasan kode grafik ---
+Jelaskan dari OwnerController.php:
+  $dailyStats = Transaksi::select(DB::raw('DATE(waktu_masuk) as date'), ...)
+  → "Query SQL: kelompokkan pendapatan per tanggal untuk data grafik"
 
-$dailyStats = Transaksi::select(
-        DB::raw('DATE(waktu_masuk) as date'),
-        DB::raw('SUM(biaya_total) as total')
-    )
-    ->where('status', 'keluar')
-    ->where('waktu_masuk', '>=', Carbon::now()->subDays(6))
-    ->groupBy('date')
-    ->orderBy('date', 'ASC')
-    ->get();
-// ^ Query ini ngambil data pendapatan per hari:
-//   DATE(waktu_masuk) = ambil tanggalnya aja (tanpa jam)
-//   SUM(biaya_total) = jumlahkan semua biaya di tanggal itu
-//   status='keluar' = yang udah bayar aja (yang keluar)
-//   subDays(6) = 6 hari kebelakang dari sekarang
-//   groupBy('date') = kelompokin per tanggal
-//   Hasilnya: [{date: '2026-03-25', total: 50000}, ...]
-
-// Data ini dikirim ke Chart.js di view buat bikin grafik batang.
+  $chartLabels → "Label sumbu X grafik: Sel 25 Mar, Rab 26 Mar, ..."
+  $chartData   → "Data sumbu Y grafik: 50000, 75000, 60000, ..."
 
 ================================================================================
-LANGKAH 10: TEKNOLOGI
+LANGKAH 10: JELASKAN TEKNOLOGI
 ================================================================================
 
-"Projek ini menggunakan:"
-- PHP 8.4 + Laravel 12 (backend)
-- MySQL (database)
-- Blade Template (tampilan)
-- Tailwind CSS (styling/desain)
-- Alpine.js (interaktivitas tanpa reload halaman)
-- Chart.js (grafik di dashboard owner)
-- Vite (build tool untuk CSS & JS)
+Bilang:
+"Teknologi yang saya pakai:
+ - PHP 8.4 + Laravel 12 untuk backend
+ - MySQL untuk database
+ - Blade Template untuk tampilan
+ - Tailwind CSS untuk styling
+ - Alpine.js untuk interaktivitas (tab, modal, toggle)
+ - Chart.js untuk grafik pendapatan
+ - Vite untuk build CSS & JavaScript
 
-"Konsep yang dipakai:"
-- MVC (Model-View-Controller) = pemisahan logika, data, dan tampilan
-- RBAC (Role-Based Access Control) = akses berdasarkan role
-- Middleware = filter keamanan sebelum masuk halaman
-- Eloquent ORM = query database tanpa nulis SQL manual
-- MD5 Hashing = enkripsi password
+ Konsep yang dipakai:
+ - MVC: pemisahan logika, data, dan tampilan
+ - RBAC: akses berdasarkan role (admin, petugas, owner)
+ - Middleware: satpam digital untuk keamanan halaman
+ - Eloquent ORM: akses database tanpa nulis SQL manual
+ - MD5: enkripsi password"
 
 ================================================================================
-TIP PRESENTASI:
+FILE YANG HARUS DITUNJUKKAN SAAT PRESENTASI:
 ================================================================================
 
-1. Jangan cuma baca kode, DEMO-kan langsung di browser!
-2. Login sebagai tiap role dan tunjukkan fiturnya
-3. Kalo ditanya "kenapa pakai MD5?" jawab:
-   "Sesuai spesifikasi UKK yang diberikan"
-4. Kalo ditanya "apa itu middleware?" jawab:
-   "Semacam satpam yang ngecek siapa yang boleh masuk"
-5. Kalo ditanya "apa itu MVC?" jawab:
-   "Pola pemisahan kode: Model = data, View = tampilan,
-    Controller = logika/otak"
+  1. schema.sql              → database & relasi tabel
+  2. login.blade.php         → form login + animasi
+  3. LoginRequest.php        → proses autentikasi MD5
+  4. AuthenticatedSession... → redirect per role + cek status
+  5. CheckRole.php           → middleware keamanan RBAC
+  6. Transaksi.php (model)   → relasi antar tabel
+  7. web.php (routes)        → peta URL lengkap
+  8. PetugasController.php   → logika masuk/keluar
+  9. AdminController.php     → logika CRUD user/tarif/area
+  10. OwnerController.php    → logika laporan + grafik
+
+================================================================================
+TIPS SAAT PRESENTASI:
+================================================================================
+
+1. JANGAN cuma baca kode → DEMO-kan langsung di browser!
+2. Login sebagai tiap role, tunjukkan fitur-fiturnya
+3. Kalau ditanya "kenapa pakai MD5?" → "Sesuai spesifikasi UKK"
+4. Kalau ditanya "apa itu middleware?" → "Satpam digital"
+5. Kalau ditanya "apa itu MVC?" → "Model = data, View = tampilan, Controller = otak"
+6. Kalau ditanya "apa itu Eloquent?" → "Cara akses database tanpa nulis SQL manual"
+7. Percaya diri dan jangan buru-buru! Jelaskan pelan-pelan
 ================================================================================

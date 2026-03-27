@@ -1,4 +1,7 @@
 <?php
+// FILE: Tarif.php (Model)
+// FUNGSI: Penghubung ke tabel tb_tarif di database.
+//         Menyimpan data tarif parkir per jenis kendaraan (Motor, Mobil, dll).
 
 namespace App\Models;
 
@@ -15,6 +18,7 @@ class Tarif extends Model
 
     protected $fillable = ['jenis_kendaraan', 'tarif_per_jam'];
 
+    // Relasi: 1 tarif bisa dipakai banyak transaksi
     public function transaksis()
     {
         return $this->hasMany(Transaksi::class, 'id_tarif', 'id_tarif');

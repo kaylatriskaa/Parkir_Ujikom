@@ -108,14 +108,14 @@
 
     <div class="max-w-7xl mx-auto px-6 pb-12">
         <div
-            class="bg-[#EEBB4D] rounded-[3rem] py-10 px-16 mb-10 shadow-xl flex justify-between items-center text-white border-4 border-white/20">
+            class="bg-[#EEBB4D] rounded-[2rem] py-6 px-10 mb-8 shadow-xl flex justify-between items-center text-white border-4 border-white/20">
             <div>
-                <p class="font-bold opacity-80  text-sm">Waktu Sekarang :</p>
-                <h2 id="clock" class="text-6xl font-black tracking-tighter">00:00:00</h2>
+                <p class="font-bold opacity-80 text-xs">Waktu Sekarang :</p>
+                <h2 id="clock" class="text-4xl font-black tracking-tighter">00:00:00</h2>
             </div>
             <div class="text-right">
-                <p class="font-bold opacity-80 text-sm">Tanggal Hari Ini :</p>
-                <h2 id="current-date" class="text-4xl font-black tracking-tighter">--/--/----</h2>
+                <p class="font-bold opacity-80 text-xs">Tanggal Hari Ini :</p>
+                <h2 id="current-date" class="text-2xl font-black tracking-tighter">--/--/----</h2>
             </div>
         </div>
 
@@ -133,25 +133,30 @@
             </button>
             <button @click="tab = 'aktivitas'"
                 :class="tab === 'aktivitas' ? 'bg-[#2D3436] text-white shadow-lg' : 'text-amber-700'"
-                class="px-8 py-3 rounded-2xl font-bold text-sm transition-all uppercase">
+                class="px-6 py-3 rounded-2xl font-bold text-sm transition-all uppercase">
                 <i class="fas fa-history mr-2"></i> Aktivitas
+            </button>
+            <button @click="tab = 'parkir'"
+                :class="tab === 'parkir' ? 'bg-[#2D3436] text-white shadow-lg' : 'text-amber-700'"
+                class="px-6 py-3 rounded-2xl font-bold text-sm transition-all uppercase">
+                <i class="fas fa-car mr-2"></i> Parkir <span class="bg-red-500 text-white text-[9px] px-2 py-0.5 rounded-full ml-1" x-text="listKendaraan.length"></span>
             </button>
             <button @click="tab = 'area'"
                 :class="tab === 'area' ? 'bg-[#2D3436] text-white shadow-lg' : 'text-amber-700'"
-                class="px-8 py-3 rounded-2xl font-bold text-sm transition-all uppercase">
+                class="px-6 py-3 rounded-2xl font-bold text-sm transition-all uppercase">
                 <i class="fas fa-th-large mr-2"></i> Area
             </button>
         </div>
 
         <div x-show="tab === 'masuk'" x-transition x-cloak>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
-                <div class="bg-[#FF9F1C] p-8 md:p-12 rounded-[3.5rem] shadow-2xl flex flex-col justify-center">
-                    <h3 class="text-2xl font-black text-white mb-10 text-center uppercase ">Input Kendaraan Masuk
+                <div class="bg-[#FF9F1C] p-6 md:p-8 rounded-[2.5rem] shadow-2xl flex flex-col justify-center">
+                    <h3 class="text-lg font-black text-white mb-6 text-center uppercase">Input Kendaraan Masuk
                     </h3>
-                    <form action="{{ route('petugas.masuk') }}" method="POST" class="space-y-6">
+                    <form action="{{ route('petugas.masuk') }}" method="POST" class="space-y-4">
                         @csrf
                         <select name="id_tarif" id="tarif_select" required
-                            class="w-full px-6 py-4 rounded-2xl font-bold text-gray-700 shadow-lg outline-none">
+                            class="w-full px-4 py-3 rounded-xl font-bold text-sm text-gray-700 shadow-lg outline-none">
                             <option value="" disabled selected>— Pilih Jenis Kendaraan —</option>
                             @foreach ($tarifs as $tarif)
                                 <option value="{{ $tarif->id_tarif }}" data-jenis="{{ $tarif->jenis_kendaraan }}">
@@ -159,7 +164,7 @@
                             @endforeach
                         </select>
                         <select name="id_area" id="area_select" required
-                            class="w-full px-6 py-4 rounded-2xl font-bold text-gray-700 shadow-lg outline-none">
+                            class="w-full px-4 py-3 rounded-xl font-bold text-sm text-gray-700 shadow-lg outline-none">
                             <option value="" disabled selected>— Pilih Area Parkir —</option>
                             @foreach ($areas as $area)
                                 <option value="{{ $area->id_area }}" data-nama="{{ $area->nama_area }}">
@@ -167,9 +172,9 @@
                             @endforeach
                         </select>
                         <input type="text" name="plat_nomor" id="plat_input" placeholder="B 1234 ABC" required
-                            class="w-full px-8 py-5 rounded-2xl font-black text-3xl uppercase text-center text-gray-800 shadow-inner outline-none">
+                            class="w-full px-6 py-4 rounded-xl font-black text-xl uppercase text-center text-gray-800 shadow-inner outline-none">
                         <button type="submit"
-                            class="w-full py-6 bg-[#2D3436] text-white rounded-2xl font-black text-xl shadow-2xl hover:bg-black transition-all uppercase">CETAK
+                            class="w-full py-4 bg-[#2D3436] text-white rounded-xl font-black text-sm shadow-2xl hover:bg-black transition-all uppercase">CETAK
                             KARCIS</button>
                     </form>
                 </div>
@@ -203,13 +208,13 @@
 
         <div x-show="tab === 'keluar'" x-transition x-cloak>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
-                <div class="bg-red-500 p-8 md:p-12 rounded-[3.5rem] shadow-2xl flex flex-col justify-center">
-                    <h3 class="text-2xl font-black text-white mb-10 text-center uppercase">Input Kendaraan Keluar
+                <div class="bg-red-500 p-6 md:p-8 rounded-[2.5rem] shadow-2xl flex flex-col justify-center">
+                    <h3 class="text-lg font-black text-white mb-6 text-center uppercase">Input Kendaraan Keluar
                     </h3>
-                    <div class="space-y-6">
+                    <div class="space-y-4">
                         <input type="text" x-model="inputPlat" @input="cariKendaraan()"
                             placeholder="MASUKKAN PLAT NOMOR"
-                            class="w-full px-8 py-5 rounded-2xl font-black text-3xl uppercase text-center text-gray-800 shadow-inner outline-none">
+                            class="w-full px-6 py-4 rounded-xl font-black text-xl uppercase text-center text-gray-800 shadow-inner outline-none">
                         <div
                             class="bg-white/20 p-6 rounded-2xl text-white font-bold space-y-2 min-h-[100px] flex flex-col justify-center text-center">
                             <template x-if="foundData">
@@ -233,7 +238,7 @@
                         </div>
                         <button type="button"
                             @click="if(foundData) { showModal = true } else { alert('Ketik plat nomor yang terdaftar!') }"
-                            class="w-full py-6 bg-[#2D3436] text-white rounded-2xl font-black text-xl shadow-2xl hover:bg-black transition-all uppercase">PROSES
+                            class="w-full py-4 bg-[#2D3436] text-white rounded-xl font-black text-sm shadow-2xl hover:bg-black transition-all uppercase">PROSES
                             PEMBAYARAN</button>
                     </div>
                 </div>
@@ -338,6 +343,47 @@
             </div>
         </div>
 
+        {{-- TAB: LIST KENDARAAN PARKIR --}}
+        <div x-show="tab === 'parkir'" x-transition x-cloak>
+            <div class="bg-white rounded-[2rem] shadow-xl overflow-hidden border-4 border-white">
+                <div class="bg-[#2D3436] px-8 py-5 flex justify-between items-center text-white">
+                    <div class="flex items-center gap-3">
+                        <h3 class="text-lg font-black uppercase">Kendaraan Sedang Parkir</h3>
+                        <span class="bg-red-500 text-white px-3 py-1 rounded-full text-xs font-black" x-text="listKendaraan.length + ' Unit'"></span>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="bg-gray-50 border-b">
+                                <th class="px-6 py-4 text-xs font-black text-gray-400 uppercase">No</th>
+                                <th class="px-6 py-4 text-xs font-black text-gray-400 uppercase">Plat Nomor</th>
+                                <th class="px-6 py-4 text-xs font-black text-gray-400 uppercase">Jenis</th>
+                                <th class="px-6 py-4 text-xs font-black text-gray-400 uppercase">Waktu Masuk</th>
+                                <th class="px-6 py-4 text-xs font-black text-gray-400 uppercase">Durasi</th>
+                                <th class="px-6 py-4 text-xs font-black text-gray-400 uppercase">Estimasi Biaya</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y">
+                            <template x-for="(k, i) in listKendaraan" :key="i">
+                                <tr class="hover:bg-amber-50 transition-colors">
+                                    <td class="px-6 py-4 text-sm text-gray-400 font-bold" x-text="i+1"></td>
+                                    <td class="px-6 py-4 font-black text-gray-800 uppercase tracking-wider" x-text="k.plat_nomor"></td>
+                                    <td class="px-6 py-4 text-sm font-bold text-gray-500 uppercase" x-text="k.jenis_kendaraan"></td>
+                                    <td class="px-6 py-4 text-sm font-bold text-gray-600" x-text="new Date(k.waktu_masuk).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'})"></td>
+                                    <td class="px-6 py-4 text-sm font-bold text-orange-500" x-text="Math.max(1, Math.ceil((new Date() - new Date(k.waktu_masuk)) / 3600000)) + ' Jam'"></td>
+                                    <td class="px-6 py-4 font-black text-gray-800" x-text="'Rp ' + formatRupiah(Math.max(1, Math.ceil((new Date() - new Date(k.waktu_masuk)) / 3600000)) * k.tarif_per_jam)"></td>
+                                </tr>
+                            </template>
+                            <template x-if="listKendaraan.length === 0">
+                                <tr><td colspan="6" class="px-6 py-16 text-center italic text-gray-400">Tidak ada kendaraan yang sedang parkir saat ini.</td></tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
         <div x-data="{ selectedArea: '' }" x-show="tab === 'area'" x-transition x-cloak>
             <div class="bg-white rounded-[3rem] shadow-xl overflow-hidden border-4 border-white">
 
@@ -353,7 +399,7 @@
                             <select x-model="selectedArea"
                                 class="w-full bg-white/10 border-2 border-white/20 rounded-2xl px-6 py-3 text-white font-bold outline-none focus:border-amber-400 transition-all cursor-pointer">
                                 <option value="" class="text-black">-- PILIH AREA --</option>
-                                @foreach ($areas as $area)
+                                @foreach ($allAreas as $area)
                                     <option value="area_{{ $area->id_area }}" class="text-black">
                                         {{ $area->nama_area }}</option>
                                 @endforeach
@@ -369,7 +415,7 @@
                             dahulu</p>
                     </div>
 
-                    @foreach ($areas as $area)
+                    @foreach ($allAreas as $area)
                         <div x-show="selectedArea === 'area_{{ $area->id_area }}'"
                             x-transition:enter="transition ease-out duration-300"
                             x-transition:enter-start="opacity-0 translate-y-4">
@@ -492,6 +538,9 @@
 
         @if (session('cetak_id'))
             window.open("{{ route('petugas.cetak', session('cetak_id')) }}", "_blank");
+        @endif
+        @if (session('cetak_keluar_id'))
+            window.open("{{ route('petugas.cetak.keluar', session('cetak_keluar_id')) }}", "_blank");
         @endif
     </script>
 </body>

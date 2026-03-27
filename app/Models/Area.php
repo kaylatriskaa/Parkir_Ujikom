@@ -1,4 +1,7 @@
 <?php
+// FILE: Area.php (Model)
+// FUNGSI: Penghubung ke tabel tb_area_parkir di database.
+//         Menyimpan data area/zona parkir beserta kapasitas dan jumlah terisi.
 
 namespace App\Models;
 
@@ -19,6 +22,7 @@ class Area extends Model
         'terisi',
     ];
 
+    // Relasi: 1 area bisa punya banyak transaksi
     public function transaksis()
     {
         return $this->hasMany(Transaksi::class, 'id_area', 'id_area');

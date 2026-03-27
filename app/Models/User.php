@@ -1,4 +1,8 @@
 <?php
+// FILE: User.php (Model)
+// FUNGSI: Penghubung ke tabel tb_user di database.
+//         Menyimpan data akun pengguna (admin, petugas, owner).
+//         Extends Authenticatable karena dipakai untuk sistem login Laravel.
 
 namespace App\Models;
 
@@ -22,6 +26,7 @@ class User extends Authenticatable
         'status_aktif',
     ];
 
+    // Password disembunyikan dari output JSON (keamanan)
     protected $hidden = [
         'password',
     ];

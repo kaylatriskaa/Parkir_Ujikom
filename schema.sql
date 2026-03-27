@@ -44,6 +44,7 @@ CREATE TABLE `tb_tarif` (
 INSERT INTO `tb_tarif` (`jenis_kendaraan`, `tarif_per_jam`) VALUES
 ('motor', 2000),
 ('mobil', 5000);
+('lainnya', 12000)
 
 -- ============================================================
 -- 3. TABEL tb_area_parkir

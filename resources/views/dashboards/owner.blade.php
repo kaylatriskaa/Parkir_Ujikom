@@ -32,6 +32,9 @@
                 <input type="date" name="end_date" value="{{ request('end_date', date('Y-m-d')) }}" class="bg-gray-50 border-none rounded-xl px-4 py-2 text-xs font-bold focus:ring-2 focus:ring-amber-400 text-gray-600">
                 <button type="submit" class="bg-amber-500 text-white px-6 py-2 rounded-xl font-black text-[10px] uppercase hover:bg-black transition-all shadow-md">Sinkronkan Data</button>
             </form>
+            <button onclick="window.open('{{ route('owner.export.pdf', ['start_date' => request('start_date', date('Y-m-01')), 'end_date' => request('end_date', date('Y-m-d'))]) }}', 'ExportPDF', 'width=900,height=700,scrollbars=yes,resizable=yes')" class="bg-red-500 text-white px-6 py-2 rounded-xl font-black text-[10px] uppercase hover:bg-red-700 transition-all shadow-md flex items-center gap-2">
+                <i class="fas fa-file-pdf"></i> Export PDF
+            </button>
         </div>
 
         {{-- STATS CARDS --}}

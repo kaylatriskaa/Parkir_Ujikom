@@ -1,0 +1,216 @@
+================================================================================
+   TUTORIAL INSTALASI - APLIKASI PARKIR "PARKIEST"
+================================================================================
+
+Ikuti langkah-langkah ini satu per satu dari awal sampai selesai.
+Pastikan koneksi internet aktif saat instalasi.
+
+================================================================================
+LANGKAH 1: INSTALL SOFTWARE YANG DIBUTUHKAN
+================================================================================
+
+Ada 3 software yang harus di-install:
+
+A. LARAGON (sudah include PHP + MySQL + Apache sekaligus)
+   Download: https://laragon.org/download/
+   - Pilih "Laragon Full"
+   - Install seperti biasa (Next-Next-Finish)
+   - Laragon otomatis install PHP, MySQL, Node.js, dan Composer!
+
+B. Composer (biasanya sudah terinstall dari Laragon)
+   Cek dulu: buka Terminal Laragon → ketik "composer -V"
+   Kalau belum ada, download: https://getcomposer.org/Composer-Setup.exe
+
+C. Node.js + NPM (biasanya sudah terinstall dari Laragon)
+   Cek dulu: buka Terminal Laragon → ketik "node -v"
+   Kalau belum ada, download: https://nodejs.org (pilih yang LTS)
+
+CARA CEK SUDAH TERINSTALL:
+Buka Terminal Laragon (klik kanan icon Laragon → Terminal), lalu ketik:
+
+   php -v            → harus muncul "PHP 8.x.x"
+   composer -V       → harus muncul "Composer version 2.x.x"
+   node -v           → harus muncul "v18.x.x" atau lebih
+   npm -v            → harus muncul "9.x.x" atau lebih
+
+================================================================================
+LANGKAH 2: NYALAKAN LARAGON
+================================================================================
+
+1. Buka Laragon
+2. Klik tombol "Start All" (warna hijau)
+   → Tunggu sampai Apache dan MySQL muncul "started"
+   → Kalau sudah hijau semua, berarti MySQL sudah nyala
+
+================================================================================
+LANGKAH 3: BUAT DATABASE
+================================================================================
+
+Ada 2 cara, pilih salah satu:
+
+--- CARA 1: Lewat HeidiSQL (bawaan Laragon, PALING GAMPANG) ---
+
+1. Di Laragon, klik tombol "Database" (atau Menu → MySQL → HeidiSQL)
+2. Klik "Open" untuk konek ke MySQL
+3. Di panel kiri, klik kanan → "Create new" → "Database"
+4. Nama: ukk_parkir → klik OK
+5. Klik database "ukk_parkir" di panel kiri
+6. Klik tab "Query" di atas
+7. Buka file "schema.sql" di folder projek pakai Notepad
+8. COPY SEMUA isinya
+9. PASTE di kotak Query HeidiSQL
+10. Klik tombol "Run" (icon play biru) atau tekan F9
+11. Cek di panel kiri → klik refresh → harus ada 8 tabel:
+    tb_user, tb_tarif, tb_area_parkir, tb_kendaraan,
+    tb_transaksi, tb_log_aktivitas, tb_log, sessions
+
+--- CARA 2: Lewat Terminal Laragon ---
+
+1. Buka Terminal Laragon (klik kanan icon Laragon → Terminal)
+2. Ketik:
+      mysql -u root
+3. Setelah masuk MySQL, ketik:
+      CREATE DATABASE ukk_parkir;
+      USE ukk_parkir;
+      SOURCE C:\lokasi\folder\Parkir_Ujikom\schema.sql;
+      EXIT;
+
+   (Ganti "C:\lokasi\folder" dengan lokasi folder projek kamu)
+
+================================================================================
+LANGKAH 4: SETUP PROJECT LARAVEL
+================================================================================
+
+1. Buka Terminal Laragon (klik kanan icon Laragon → Terminal)
+
+2. Masuk ke folder projek:
+      cd C:\lokasi\folder\Parkir_Ujikom
+   (sesuaikan dengan lokasi folder kamu)
+
+3. Install library PHP:
+      composer install
+   (tunggu 1-3 menit sampai selesai)
+
+4. Install library JavaScript:
+      npm install
+   (tunggu 1-2 menit sampai selesai)
+
+5. Copy file konfigurasi:
+      copy .env.example .env
+
+6. Generate key aplikasi:
+      php artisan key:generate
+
+7. Edit file .env:
+   Buka file ".env" di folder projek pakai Notepad/VS Code
+   Cari dan ubah baris-baris ini:
+
+   ─────────────────────────────────────────
+   DB_CONNECTION=mysql
+   DB_HOST=127.0.0.1
+   DB_PORT=3306
+   DB_DATABASE=ukk_parkir
+   DB_USERNAME=root
+   DB_PASSWORD=
+   ─────────────────────────────────────────
+
+   CATATAN:
+   - DB_PASSWORD= biarkan KOSONG (Laragon default tanpa password)
+   - DB_PORT=3306 (port default Laragon MySQL)
+
+   Pastikan juga ada baris:
+   SESSION_DRIVER=file
+
+8. Build tampilan (CSS & JavaScript):
+      npm run build
+   (tunggu sampai muncul "built in ...")
+
+================================================================================
+LANGKAH 5: JALANKAN APLIKASI
+================================================================================
+
+Di Terminal Laragon yang sama, ketik:
+
+      php artisan serve
+
+Akan muncul:
+   "Server running on [http://127.0.0.1:8000]"
+
+Buka browser (Chrome/Edge), ketik: http://127.0.0.1:8000
+
+================================================================================
+LANGKAH 6: LOGIN
+================================================================================
+
+Gunakan akun berikut untuk login:
+
+   ┌────────────┬────────────┬───────────┐
+   │  Username  │  Password  │   Role    │
+   ├────────────┼────────────┼───────────┤
+   │  admin     │  admin123  │  Admin    │
+   │  petugas   │  admin123  │  Petugas  │
+   │  owner     │  admin123  │  Owner    │
+   └────────────┴────────────┴───────────┘
+
+Kalo berhasil login = SELESAI! Aplikasi siap digunakan.
+
+================================================================================
+TROUBLESHOOTING (KALO ADA ERROR)
+================================================================================
+
+ERROR: "SQLSTATE Connection refused"
+→ MySQL belum nyala. Buka Laragon → klik "Start All".
+
+ERROR: "Access denied for user 'root'"
+→ Cek file .env → DB_PASSWORD harus kosong (tanpa isi).
+
+ERROR: "Base table or view not found"
+→ schema.sql belum di-import. Ulangi Langkah 3.
+
+ERROR: "Vite manifest not found"
+→ Belum build. Jalankan: npm run build
+
+ERROR: "Class not found" atau "Package not found"
+→ Belum install. Jalankan: composer install
+
+ERROR: "Port 8000 sudah dipakai" / "Address already in use"
+→ Pakai port lain: php artisan serve --port=8080
+   Lalu buka http://127.0.0.1:8080
+
+ERROR: "'php' is not recognized as a command"
+→ Pakai Terminal Laragon (bukan CMD biasa).
+   Atau tambahkan PHP ke PATH:
+   1. Buka Start → cari "Environment Variables"
+   2. Klik "Environment Variables..."
+   3. Di "System Variables" → cari "Path" → klik Edit
+   4. Klik "New" → tambahkan: C:\laragon\bin\php\php-8.x.x-Win32-vs16-x64
+   5. OK → OK → Restart CMD
+
+================================================================================
+RINGKASAN URUTAN (COPAS KE TERMINAL LARAGON)
+================================================================================
+
+cd C:\lokasi\folder\Parkir_Ujikom
+composer install
+npm install
+copy .env.example .env
+php artisan key:generate
+
+:: Edit .env -> sesuaikan DB settings (lihat Langkah 4.7)
+
+npm run build
+php artisan serve
+
+:: Buka http://127.0.0.1:8000 di browser
+
+================================================================================
+CATATAN PENTING:
+================================================================================
+
+- Setiap kali mau pakai aplikasi, WAJIB nyalakan Laragon dulu
+  (Buka Laragon → klik "Start All")
+- Lalu buka Terminal Laragon → jalankan: php artisan serve
+- Jangan tutup Terminal selama aplikasi dipakai
+- Untuk menghentikan server: tekan Ctrl+C di Terminal
+
+================================================================================
