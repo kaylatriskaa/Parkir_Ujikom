@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cetak Karcis - {{ $transaksi->plat_nomor }}</title>
+    <title>Cetak Karcis - {{ $transaksi->kendaraan->plat_nomor ?? '-' }}</title>
     <style>
-        /* Setup Ukuran Kertas Struk (Thermal 58mm/80mm) */
         @page {
             size: 80mm auto;
             margin: 0;
@@ -51,8 +50,6 @@
             margin: 10px 0;
             font-size: 10px;
         }
-
-        /* Hilangkan elemen ini saat diprint */
         @media print {
             .no-print { display: none; }
         }
@@ -74,16 +71,16 @@
     <div class="content">
         <div class="info-row">
             <span>No. Tiket:</span>
-            <span>#{{ str_pad($transaksi->id, 6, '0', STR_PAD_LEFT) }}</span>
+            <span>#{{ str_pad($transaksi->id_parkir, 6, '0', STR_PAD_LEFT) }}</span>
         </div>
 
         <div class="plat">
-            {{ strtoupper($transaksi->plat_nomor) }}
+            {{ strtoupper($transaksi->kendaraan->plat_nomor ?? '-') }}
         </div>
 
         <div class="info-row">
             <span>Jenis:</span>
-            <span>{{ strtoupper($transaksi->jenis_kendaraan) }}</span>
+            <span>{{ strtoupper($transaksi->kendaraan->jenis_kendaraan ?? '-') }}</span>
         </div>
         <div class="info-row">
             <span>Area:</span>
@@ -91,11 +88,11 @@
         </div>
         <div class="info-row">
             <span>Petugas:</span>
-            <span>{{ auth()->user()->name }}</span>
+            <span>{{ auth()->user()->nama_lengkap }}</span>
         </div>
 
         <div class="barcode">
-            <p style="border-top: 1px solid #eee; padding-top: 5px;">* TARIF: Rp {{ number_format($transaksi->harga_per_jam, 0, ',', '.') }}/JAM *</p>
+            <p style="border-top: 1px solid #eee; padding-top: 5px;">* TARIF: Rp {{ number_format($transaksi->tarif->tarif_per_jam ?? 0, 0, ',', '.') }}/JAM *</p>
         </div>
     </div>
 
@@ -105,15 +102,9 @@
     </div>
 
     <script>
-        // Fungsi untuk menutup tab otomatis setelah dialog print selesai
         window.onafterprint = function() {
             window.close();
         };
-
-        // Timeout cadangan jika onafterprint tidak didukung beberapa browser
-        setTimeout(() => {
-            // window.close();
-        }, 5000);
     </script>
 </body>
 </html>

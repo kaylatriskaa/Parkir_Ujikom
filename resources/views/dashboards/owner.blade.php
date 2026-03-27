@@ -10,7 +10,7 @@
             <div class="flex items-center gap-6">
                 <div class="text-right hidden md:block">
                     <p class="text-[10px] font-black text-orange-400 uppercase tracking-widest leading-none mb-1">Owner Mode</p>
-                    <p class="font-bold text-gray-800 italic">{{ auth()->user()->name }}</p>
+                    <p class="font-bold text-gray-800 italic">{{ auth()->user()->nama_lengkap }}</p>
                 </div>
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
@@ -54,7 +54,6 @@
 
         {{-- GRAFIK & RINCIAN --}}
         <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
-            {{-- GRAFIK (KIRI) --}}
             <div class="lg:col-span-2 bg-white p-10 rounded-[3rem] shadow-sm border border-amber-100">
                 <h3 class="text-xl font-black text-gray-800 uppercase tracking-tighter mb-8 ">
                     <i class="fas fa-chart-line text-amber-500 mr-2"></i> Grafik Pendapatan
@@ -64,18 +63,17 @@
                 </div>
             </div>
 
-            {{-- RINCIAN TRANSAKSI PENDAPATAN (KANAN) --}}
             <div class="bg-white p-8 rounded-[3rem] shadow-sm border border-amber-100 flex flex-col">
                 <h3 class="text-lg font-black text-gray-800 uppercase mb-6 ">Rincian Masuk</h3>
                 <div class="space-y-4 overflow-y-auto max-h-[350px] pr-2 custom-scrollbar">
                     @forelse ($rincianPendapatan as $item)
                     <div class="p-4 rounded-2xl bg-emerald-50 border border-emerald-100 flex justify-between items-center">
                         <div>
-                            <p class="text-[10px] font-black text-emerald-700 uppercase leading-none mb-1">{{ $item->plat_nomor }}</p>
-                            <p class="text-[9px] text-gray-400 font-bold">{{ \Carbon\Carbon::parse($item->created_at)->format('d M, H:i') }}</p>
+                            <p class="text-[10px] font-black text-emerald-700 uppercase leading-none mb-1">{{ $item->kendaraan->plat_nomor ?? '-' }}</p>
+                            <p class="text-[9px] text-gray-400 font-bold">{{ \Carbon\Carbon::parse($item->waktu_keluar)->format('d M, H:i') }}</p>
                         </div>
                         <div class="text-right">
-                            <p class="text-sm font-black text-gray-800 italic">Rp {{ number_format($item->total_bayar, 0, ',', '.') }}</p>
+                            <p class="text-sm font-black text-gray-800 italic">Rp {{ number_format($item->biaya_total, 0, ',', '.') }}</p>
                         </div>
                     </div>
                     @empty
@@ -88,7 +86,7 @@
             </div>
         </div>
 
-        {{-- LOG AKTIVITAS (Bawah)--}}
+        {{-- LOG AKTIVITAS --}}
         <div class="max-w-7xl mx-auto">
              <div class="bg-white p-8 rounded-[3rem] shadow-sm border border-amber-100">
                 <h3 class="text-lg font-black text-gray-800 uppercase mb-6"><i class="fas fa-history text-amber-500 mr-2"></i> Monitor Traffic Terakhir</h3>
@@ -96,13 +94,13 @@
                     @foreach ($logs as $log)
                     <div class="flex items-center gap-4 p-4 rounded-2xl bg-gray-50 border border-gray-100">
                         <div class="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm text-amber-500 text-xs font-black">
-                            {{ \Carbon\Carbon::parse($log->created_at)->format('H:i') }}
+                            {{ \Carbon\Carbon::parse($log->waktu_masuk)->format('H:i') }}
                         </div>
                         <div class="flex-1">
-                            <p class="text-xs font-black text-gray-800 tracking-widest">{{ $log->plat_nomor }}</p>
-                            <p class="text-[9px] text-gray-400 font-bold uppercase">{{ $log->nama_area }}</p>
+                            <p class="text-xs font-black text-gray-800 tracking-widest">{{ $log->kendaraan->plat_nomor ?? '-' }}</p>
+                            <p class="text-[9px] text-gray-400 font-bold uppercase">{{ $log->area->nama_area ?? '-' }}</p>
                         </div>
-                        <div class="text-[9px] font-black uppercase {{ $log->status == 'parkir' ? 'text-blue-500' : 'text-emerald-500' }} italic">
+                        <div class="text-[9px] font-black uppercase {{ $log->status == 'masuk' ? 'text-blue-500' : 'text-emerald-500' }} italic">
                             {{ $log->status }}
                         </div>
                     </div>

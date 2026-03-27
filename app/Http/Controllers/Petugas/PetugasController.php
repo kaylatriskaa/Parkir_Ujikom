@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Transaksi;
 use App\Models\Tarif;
 use App\Models\Area;
+use App\Models\Kendaraan;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 
 class PetugasController extends Controller
@@ -14,23 +16,27 @@ class PetugasController extends Controller
     public function index(Request $request)
     {
         $tarifs = Tarif::all();
-        $areas = Area::where('is_active', 1)->get();
+        $areas = Area::whereRaw('terisi < kapasitas')->get();
         $tanggalFilter = $request->input('tanggal', Carbon::today()->toDateString());
 
-        $kendaraanAktif = Transaksi::where('status', 'parkir')
+        // Kendaraan aktif (yang masih parkir)
+        $kendaraanAktif = Transaksi::where('status', 'masuk')
+            ->with(['kendaraan', 'tarif'])
             ->get()
             ->map(function ($item) {
                 return [
-                    'plat_nomor' => strtoupper($item->plat_nomor),
-                    'jam_masuk' => $item->jam_masuk,
-                    'jenis_kendaraan' => $item->jenis_kendaraan,
-                    'harga_per_jam' => (int) $item->harga_per_jam,
+                    'id_parkir' => $item->id_parkir,
+                    'plat_nomor' => strtoupper($item->kendaraan->plat_nomor ?? ''),
+                    'waktu_masuk' => $item->waktu_masuk,
+                    'jenis_kendaraan' => $item->kendaraan->jenis_kendaraan ?? '',
+                    'tarif_per_jam' => (int) ($item->tarif->tarif_per_jam ?? 0),
                 ];
             });
 
-        // Ambil riwayat berdasarkan tanggal yang dipilih
-        $transaksis = Transaksi::whereDate('created_at', $tanggalFilter)
-            ->orderBy('created_at', 'desc')
+        // Riwayat transaksi
+        $transaksis = Transaksi::with(['kendaraan', 'tarif', 'area'])
+            ->whereDate('waktu_masuk', $tanggalFilter)
+            ->orderBy('waktu_masuk', 'desc')
             ->get();
 
         return view('dashboards.petugas', [
@@ -38,7 +44,7 @@ class PetugasController extends Controller
             'areas' => $areas,
             'kendaraanAktif' => $kendaraanAktif,
             'transaksis' => $transaksis,
-            'tanggalTerpilih' => $tanggalFilter
+            'tanggalTerpilih' => $tanggalFilter,
         ]);
     }
 
@@ -46,50 +52,60 @@ class PetugasController extends Controller
     {
         $request->validate([
             'plat_nomor' => 'required|string',
-            'tarif_id' => 'required',
-            'area_id' => 'required',
+            'id_tarif' => 'required',
+            'id_area' => 'required',
         ]);
 
         $platNomor = strtoupper(str_replace(' ', '', $request->plat_nomor));
 
-        $tarif = Tarif::find($request->tarif_id);
+        $tarif = Tarif::find($request->id_tarif);
         if (!$tarif) {
             return redirect()->back()->with('error', 'Tarif tidak ditemukan!');
         }
 
-        // Cek apakah kendaraan masih ada di dalam
-        $cekParkir = Transaksi::where('plat_nomor', $platNomor)
-            ->where('status', 'parkir')
-            ->first();
+        // Cek kendaraan masih parkir
+        $cekParkir = Transaksi::whereHas('kendaraan', function ($q) use ($platNomor) {
+            $q->where('plat_nomor', $platNomor);
+        })->where('status', 'masuk')->first();
 
         if ($cekParkir) {
             return redirect()->back()->with('error', 'Kendaraan plat ' . $request->plat_nomor . ' masih ada di dalam!');
         }
 
-        // Cek ketersediaan slot sebelum masuk
-        $area = Area::where('area_id', $request->area_id)->first();
-        if (!$area || $area->slot_tersedia <= 0) {
+        // Cek slot
+        $area = Area::find($request->id_area);
+        if (!$area || $area->terisi >= $area->kapasitas) {
             return redirect()->back()->with('error', 'Maaf, slot di area ini sudah penuh!');
         }
 
-        // 1. Simpan transaksi baru (User ID otomatis dari yang login)
+        // Buat / cari data kendaraan
+        $kendaraan = Kendaraan::firstOrCreate(
+            ['plat_nomor' => $platNomor],
+            [
+                'jenis_kendaraan' => $tarif->jenis_kendaraan,
+                'warna' => $request->input('warna', '-'),
+                'pemilik' => $request->input('pemilik', '-'),
+                'id_user' => Auth::id(),
+            ]
+        );
+
+        // Buat transaksi
         $transaksi = Transaksi::create([
-            'plat_nomor' => $platNomor,
-            'jenis_kendaraan' => $tarif->jenis_kendaraan,
-            'harga_per_jam' => $tarif->harga_per_jam,
-            'area_id' => $request->area_id,
-          'user_id' => \Illuminate\Support\Facades\Auth::id(),
-            'jam_masuk' => Carbon::now(),
-            'status' => 'parkir'
+            'id_kendaraan' => $kendaraan->id_kendaraan,
+            'id_tarif' => $tarif->id_tarif,
+            'id_area' => $request->id_area,
+            'id_user' => Auth::id(),
+            'waktu_masuk' => Carbon::now(),
+            'status' => 'masuk',
         ]);
 
-        // 2. Kurangi slot area (Cukup sekali saja)
-        $area->decrement('slot_tersedia');
+        // Tambah slot terisi
+        $area->increment('terisi');
 
         return redirect()->back()->with([
             'success' => 'Karcis berhasil dicetak untuk ' . $request->plat_nomor,
             'active_tab' => 'masuk',
-            'cetak_id' => $transaksi->id
+            'cetak_id' => $transaksi->id_parkir,
         ]);
     }
 
@@ -102,41 +118,45 @@ class PetugasController extends Controller
 
         $platInput = strtoupper(str_replace(' ', '', $request->plat_nomor));
 
-        $transaksi = Transaksi::where('plat_nomor', $platInput)
-            ->where('status', 'parkir')
-            ->first();
+        $transaksi = Transaksi::whereHas('kendaraan', function ($q) use ($platInput) {
+            $q->where('plat_nomor', $platInput);
+        })->where('status', 'masuk')->first();
 
         if ($transaksi) {
-            // Update transaksi
+            $waktuMasuk = Carbon::parse($transaksi->waktu_masuk);
+            $waktuKeluar = Carbon::now();
+            $durasi = max(1, $waktuMasuk->diffInHours($waktuKeluar, true) ?: 1);
+
             $transaksi->update([
-                'jam_keluar' => Carbon::now(),
-                'total_bayar' => $request->total_tagihan,
-                'status' => 'selesai'
+                'waktu_keluar' => $waktuKeluar,
+                'durasi_jam' => ceil($durasi),
+                'biaya_total' => $request->total_tagihan,
+                'status' => 'keluar',
             ]);
 
-            // Tambah kembali slot area
-            $area = Area::where('area_id', $transaksi->area_id)->first();
-            if ($area) {
-                $area->increment('slot_tersedia');
+            // Kurangi slot terisi
+            $area = Area::find($transaksi->id_area);
+            if ($area && $area->terisi > 0) {
+                $area->decrement('terisi');
             }
 
             return redirect()->back()->with([
                 'success' => 'Pembayaran Berhasil!',
                 'active_tab' => 'keluar',
                 'terbayar' => $request->plat_nomor,
-                'total_bayar' => $request->total_tagihan
+                'total_bayar' => $request->total_tagihan,
             ]);
         }
 
         return redirect()->back()->with([
             'error' => 'Data kendaraan tidak ditemukan!',
-            'active_tab' => 'keluar'
+            'active_tab' => 'keluar',
         ]);
     }
 
     public function cetakKarcis($id)
     {
-        $transaksi = Transaksi::with('area')->findOrFail($id);
+        $transaksi = Transaksi::with(['kendaraan', 'area', 'tarif'])->findOrFail($id);
         return view('petugas.cetak', compact('transaksi'));
     }
 }

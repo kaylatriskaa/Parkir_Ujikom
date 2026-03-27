@@ -9,29 +9,39 @@ class Transaksi extends Model
 {
     use HasFactory;
 
-    protected $table = 'transaksis';
+    protected $table = 'tb_transaksi';
+    protected $primaryKey = 'id_parkir';
+    public $timestamps = false;
 
-    // Kita masukkan semua kolom yang benar-benar ada di database kamu
-   protected $fillable = [
-    'plat_nomor',
-    'jenis_kendaraan',
-    'harga_per_jam',
-    'area_id',
-    'user_id',
-    'jam_masuk',
-    'jam_keluar',  // Harus ada ini
-    'total_bayar', // Harus ada ini
-    'status'       // Harus ada ini
-];
+    protected $fillable = [
+        'id_kendaraan',
+        'id_tarif',
+        'id_area',
+        'id_user',
+        'waktu_masuk',
+        'waktu_keluar',
+        'durasi_jam',
+        'biaya_total',
+        'status',
+    ];
 
-    /**
-     * Relasi ke Area tetap dipertahankan karena area_id biasanya sudah ada
-     */
-    public function area()
+    public function kendaraan()
     {
-        return $this->belongsTo(Area::class, 'area_id', 'area_id');
+        return $this->belongsTo(Kendaraan::class, 'id_kendaraan', 'id_kendaraan');
     }
 
-    // FUNGSI RELASI TARIF DIHAPUS
-    // Karena kita sudah pakai kolom jenis_kendaraan & harga_per_jam langsung di tabel ini
+    public function tarif()
+    {
+        return $this->belongsTo(Tarif::class, 'id_tarif', 'id_tarif');
+    }
+
+    public function area()
+    {
+        return $this->belongsTo(Area::class, 'id_area', 'id_area');
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'id_user', 'id_user');
+    }
 }

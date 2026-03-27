@@ -44,47 +44,35 @@
     listKendaraan: {{ $kendaraanAktif->toJson() }},
 
     init() {
-        // Kalau ada session terbayar, langsung jalankan pencarian
         if (this.inputPlat) { this.cariKendaraan(); }
     },
 
     cariKendaraan() {
         let inputClean = this.inputPlat.replace(/\s/g, '').toUpperCase();
-
-        // 1. Reset data pencarian setiap kali ngetik
         this.foundData = null;
         this.statusBayar = 'UNPAID';
-
         if (!inputClean) return;
 
-        // 2. Cek apakah plat ini baru saja dibayar (Status PAID)
         if (this.platTerbayar && inputClean === this.platTerbayar.replace(/\s/g, '').toUpperCase()) {
             this.statusBayar = 'PAID';
-            // Kita tidak boleh return di sini, kita tetap butuh cari datanya di list
-            // atau set data manual agar struk tidak kosong.
         }
 
-        // 3. Cari data kendaraan di list aktif
         let match = this.listKendaraan.find(k => k.plat_nomor.replace(/\s/g, '').toUpperCase() === inputClean);
 
         if (match) {
             this.foundData = match;
-            let masuk = new Date(match.jam_masuk);
+            let masuk = new Date(match.waktu_masuk);
             let sekarang = new Date();
             this.foundData.waktu_masuk_format = masuk.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 
-            // Hitung durasi
             let selisihMs = sekarang - masuk;
             let selisihJam = Math.ceil(selisihMs / (1000 * 60 * 60));
             this.foundData.durasi = selisihJam > 0 ? selisihJam : 1;
 
-            // Set total tagihan (kecuali kalau sudah PAID, pakai yang dari session)
             if (this.statusBayar !== 'PAID') {
-                this.totalTagihan = this.foundData.durasi * parseInt(match.harga_per_jam);
+                this.totalTagihan = this.foundData.durasi * parseInt(match.tarif_per_jam);
             }
         } else if (this.statusBayar === 'PAID') {
-            // Jika data sudah lunas tapi tidak ada di listAktif (karena sudah pindah status di DB)
-            // Kita buatkan data bayangan supaya struk tetap terisi
             this.foundData = {
                 waktu_masuk_format: '--:--',
                 durasi: '--'
@@ -106,7 +94,7 @@
             <div class="text-right">
                 <p class="text-[10px] font-black text-orange-400 uppercase tracking-widest leading-none mb-1">Petugas
                     Aktif</p>
-                <p class="font-bold text-gray-800 italic">{{ auth()->user()->name }}</p>
+                <p class="font-bold text-gray-800 italic">{{ auth()->user()->nama_lengkap }}</p>
             </div>
             <form method="POST" action="{{ route('logout') }}">
                 @csrf
@@ -162,20 +150,20 @@
                     </h3>
                     <form action="{{ route('petugas.masuk') }}" method="POST" class="space-y-6">
                         @csrf
-                        <select name="tarif_id" id="tarif_select" required
+                        <select name="id_tarif" id="tarif_select" required
                             class="w-full px-6 py-4 rounded-2xl font-bold text-gray-700 shadow-lg outline-none">
                             <option value="" disabled selected>— Pilih Jenis Kendaraan —</option>
                             @foreach ($tarifs as $tarif)
-                                <option value="{{ $tarif->id }}" data-jenis="{{ $tarif->jenis_kendaraan }}">
+                                <option value="{{ $tarif->id_tarif }}" data-jenis="{{ $tarif->jenis_kendaraan }}">
                                     {{ $tarif->jenis_kendaraan }}</option>
                             @endforeach
                         </select>
-                        <select name="area_id" id="area_select" required
+                        <select name="id_area" id="area_select" required
                             class="w-full px-6 py-4 rounded-2xl font-bold text-gray-700 shadow-lg outline-none">
                             <option value="" disabled selected>— Pilih Area Parkir —</option>
                             @foreach ($areas as $area)
-                                <option value="{{ $area->area_id }}" data-nama="{{ $area->nama_area }}">
-                                    {{ $area->nama_area }} (Tersedia: {{ $area->slot_tersedia }})</option>
+                                <option value="{{ $area->id_area }}" data-nama="{{ $area->nama_area }}">
+                                    {{ $area->nama_area }} (Tersedia: {{ $area->kapasitas - $area->terisi }})</option>
                             @endforeach
                         </select>
                         <input type="text" name="plat_nomor" id="plat_input" placeholder="B 1234 ABC" required
@@ -321,19 +309,19 @@
                             @forelse($transaksis as $t)
                                 <tr class="hover:bg-amber-50 transition-colors">
                                     <td class="px-8 py-5">
-                                        <p class="font-black uppercase text-gray-800">{{ $t->plat_nomor }}</p>
+                                        <p class="font-black uppercase text-gray-800">{{ $t->kendaraan->plat_nomor ?? '-' }}</p>
                                     </td>
                                     <td class="px-8 py-5 text-sm font-bold text-gray-500 uppercase">
-                                        {{ $t->jenis_kendaraan }}</td>
+                                        {{ $t->kendaraan->jenis_kendaraan ?? '-' }}</td>
                                     <td class="px-8 py-5 text-sm font-bold text-gray-600">
-                                        {{ date('H:i', strtotime($t->jam_masuk)) }}</td>
+                                        {{ date('H:i', strtotime($t->waktu_masuk)) }}</td>
                                     <td class="px-8 py-5 text-sm font-bold text-gray-600">
-                                        {{ $t->jam_keluar ? date('H:i', strtotime($t->jam_keluar)) : '--:--' }}</td>
+                                        {{ $t->waktu_keluar ? date('H:i', strtotime($t->waktu_keluar)) : '--:--' }}</td>
                                     <td class="px-8 py-5 font-black text-gray-800">Rp
-                                        {{ number_format($t->total_bayar, 0, ',', '.') }}</td>
+                                        {{ number_format($t->biaya_total, 0, ',', '.') }}</td>
                                     <td class="px-8 py-5 text-center">
                                         <span
-                                            class="{{ $t->status == 'parkir' ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600' }} px-4 py-1.5 rounded-xl text-[10px] font-black uppercase">
+                                            class="{{ $t->status == 'masuk' ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600' }} px-4 py-1.5 rounded-xl text-[10px] font-black uppercase">
                                             {{ $t->status }}
                                         </span>
                                     </td>
@@ -366,7 +354,7 @@
                                 class="w-full bg-white/10 border-2 border-white/20 rounded-2xl px-6 py-3 text-white font-bold outline-none focus:border-amber-400 transition-all cursor-pointer">
                                 <option value="" class="text-black">-- PILIH AREA --</option>
                                 @foreach ($areas as $area)
-                                    <option value="area_{{ $area->area_id }}" class="text-black">
+                                    <option value="area_{{ $area->id_area }}" class="text-black">
                                         {{ $area->nama_area }}</option>
                                 @endforeach
                             </select>
@@ -382,9 +370,13 @@
                     </div>
 
                     @foreach ($areas as $area)
-                        <div x-show="selectedArea === 'area_{{ $area->area_id }}'"
+                        <div x-show="selectedArea === 'area_{{ $area->id_area }}'"
                             x-transition:enter="transition ease-out duration-300"
                             x-transition:enter-start="opacity-0 translate-y-4">
+
+                            @php
+                                $slotKosong = $area->kapasitas - $area->terisi;
+                            @endphp
 
                             <div class="flex justify-between items-end mb-8 border-b border-gray-200 pb-6">
                                 <div>
@@ -397,30 +389,24 @@
                                 <div class="flex gap-4">
                                     <div class="text-right">
                                         <p class="text-[10px] font-black text-emerald-600 uppercase">Kosong</p>
-                                        <p class="text-lg font-bold text-gray-800">{{ $area->slot_tersedia }}</p>
+                                        <p class="text-lg font-bold text-gray-800">{{ $slotKosong }}</p>
                                     </div>
                                     <div class="text-right border-l pl-4">
                                         <p class="text-[10px] font-black text-red-600 uppercase">Terisi</p>
-                                        <p class="text-lg font-bold text-gray-800">
-                                            {{ max(0, $area->kapasitas - $area->slot_tersedia) }}</p>
+                                        <p class="text-lg font-bold text-gray-800">{{ $area->terisi }}</p>
                                     </div>
                                 </div>
                             </div>
 
                             <div class="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 gap-3">
-                                @php
-                                    // Gunakan max(0, ...) untuk jaga-jaga kalau slot_tersedia ngaco lagi
-                                    $terisiCount = max(0, $area->kapasitas - $area->slot_tersedia);
-                                @endphp
-
                                 @for ($i = 1; $i <= $area->kapasitas; $i++)
                                     <div
                                         class="aspect-[2/3] rounded-lg border-2 flex items-center justify-center transition-all duration-500
-                            {{ $i <= $terisiCount
+                            {{ $i <= $area->terisi
                                 ? 'bg-red-500 border-red-700 shadow-[inset_0_2px_10px_rgba(0,0,0,0.1)]'
                                 : 'bg-emerald-500 border-emerald-700 shadow-sm' }}">
 
-                                        @if ($i <= $terisiCount)
+                                        @if ($i <= $area->terisi)
                                             <i class="fas fa-car text-white text-xs animate-pulse"></i>
                                         @else
                                             <span
@@ -433,10 +419,10 @@
                             <div class="mt-10 p-4 bg-white rounded-2xl border border-gray-200 flex items-center gap-4">
                                 <div class="flex-grow h-3 bg-gray-100 rounded-full overflow-hidden">
                                     <div class="h-full bg-red-500 transition-all duration-1000"
-                                        style="width: {{ ($terisiCount / $area->kapasitas) * 100 }}%"></div>
+                                        style="width: {{ $area->kapasitas > 0 ? ($area->terisi / $area->kapasitas) * 100 : 0 }}%"></div>
                                 </div>
                                 <span
-                                    class="font-black text-gray-800 text-sm">{{ round(($terisiCount / $area->kapasitas) * 100) }}%
+                                    class="font-black text-gray-800 text-sm">{{ $area->kapasitas > 0 ? round(($area->terisi / $area->kapasitas) * 100) : 0 }}%
                                     Penuh</span>
                             </div>
                         </div>

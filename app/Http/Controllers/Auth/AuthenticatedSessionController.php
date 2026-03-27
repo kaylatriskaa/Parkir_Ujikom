@@ -11,55 +11,41 @@ use Illuminate\View\View;
 
 class AuthenticatedSessionController extends Controller
 {
-    /**
-     * Display the login view.
-     */
     public function create(): View
     {
         return view('auth.login');
     }
 
-    /**
-     * Handle an incoming authentication request.
-     */
-   public function store(LoginRequest $request): RedirectResponse
-{
-    // 1. Cek email dan password
-    $request->authenticate();
+    public function store(LoginRequest $request): RedirectResponse
+    {
+        $request->authenticate();
 
-    // 2. CEK STATUS AKTIF/NONAKTIF
-    // Jika user yang baru login statusnya tidak aktif (0)
-    if ($request->user()->is_active == 0) {
-        Auth::guard('web')->logout(); // Logout paksa
+        if ($request->user()->status_aktif == 0) {
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
 
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+            return redirect()->route('login')->withErrors([
+                'username' => 'Akun Anda telah dinonaktifkan oleh Admin.',
+            ]);
+        }
 
-        // Lempar balik ke login dengan pesan error
-        return redirect()->route('login')->withErrors([
-            'email' => 'Akun Anda telah dinonaktifkan oleh Admin.',
-        ]);
+        $request->session()->regenerate();
+
+        $role = $request->user()->role;
+
+        return match ($role) {
+            'admin' => redirect()->route('admin.dashboard'),
+            'petugas' => redirect()->route('petugas.dashboard'),
+            'owner' => redirect()->route('owner.dashboard'),
+            default => redirect('/'),
+        };
     }
-
-    // 3. Jika aktif, lanjut buat session
-    $request->session()->regenerate();
-
-    $role = $request->user()->role;
-
-    return match ($role) {
-        'admin' => redirect()->route('admin.dashboard'),
-        'petugas' => redirect()->route('petugas.dashboard'),
-        'owner' => redirect()->route('owner.dashboard'),
-        default => redirect('/'),
-    };
-}
 
     public function destroy(Request $request): RedirectResponse
     {
         Auth::guard('web')->logout();
-
         $request->session()->invalidate();
-
         $request->session()->regenerateToken();
 
         return redirect('/');

@@ -14,51 +14,46 @@ class OwnerController extends Controller
 {
     public function index(Request $request)
     {
-        // 1. Ambil Filter Tanggal untuk Statistik Card & Tabel Rincian
-        // Default: Dari awal bulan ini sampai hari ini
         $start = $request->get('start_date', Carbon::now()->startOfMonth()->format('Y-m-d'));
         $end = $request->get('end_date', Carbon::now()->format('Y-m-d'));
 
-        // 2. Data Master & Log
         $areas = Area::all();
         $totalPetugas = User::where('role', 'petugas')->count();
 
-        // Log Aktivitas (Semua traffic: masuk & keluar)
-        $logs = Transaksi::leftJoin('area_parkirs', 'transaksis.area_id', '=', 'area_parkirs.area_id')
-                ->select('transaksis.*', 'area_parkirs.nama_area')
-                ->latest('transaksis.created_at')
+        // Log Aktivitas
+        $logs = Transaksi::with(['kendaraan', 'area'])
+                ->latest('waktu_masuk')
                 ->take(12)
                 ->get();
 
-        // 3. Statistik Card (Sinkron dengan Filter Tanggal)
-        $totalPendapatan = Transaksi::where('status', 'selesai')
-                ->whereBetween('created_at', [$start . ' 00:00:00', $end . ' 23:59:59'])
-                ->sum('total_bayar');
+        // Statistik
+        $totalPendapatan = Transaksi::where('status', 'keluar')
+                ->whereBetween('waktu_masuk', [$start . ' 00:00:00', $end . ' 23:59:59'])
+                ->sum('biaya_total');
 
-        $kendaraanPeriode = Transaksi::whereBetween('created_at', [$start . ' 00:00:00', $end . ' 23:59:59'])
+        $kendaraanPeriode = Transaksi::whereBetween('waktu_masuk', [$start . ' 00:00:00', $end . ' 23:59:59'])
                 ->count();
 
-        // 4. Rincian Pendapatan (Tabel di samping grafik)
-        $rincianPendapatan = Transaksi::where('status', 'selesai')
-                ->whereBetween('created_at', [$start . ' 00:00:00', $end . ' 23:59:59'])
-                ->latest()
+        // Rincian
+        $rincianPendapatan = Transaksi::with('kendaraan')
+                ->where('status', 'keluar')
+                ->whereBetween('waktu_masuk', [$start . ' 00:00:00', $end . ' 23:59:59'])
+                ->latest('waktu_keluar')
                 ->take(10)
                 ->get();
 
-        // 5. QUERY GRAFIK (7 Hari Terakhir)
-        // Ini yang bikin grafiknya jadi 7 batang supaya Owner bisa liat tren harian
+        // Grafik 7 hari
         $dailyStats = Transaksi::select(
-                DB::raw('DATE(created_at) as date'),
-                DB::raw('SUM(total_bayar) as total')
+                DB::raw('DATE(waktu_masuk) as date'),
+                DB::raw('SUM(biaya_total) as total')
             )
-            ->where('status', 'selesai')
-            ->where('created_at', '>=', Carbon::now()->subDays(6)) // Ambil 7 hari ke belakang
+            ->where('status', 'keluar')
+            ->where('waktu_masuk', '>=', Carbon::now()->subDays(6))
             ->groupBy('date')
             ->orderBy('date', 'ASC')
             ->get();
 
-        // Format Label:
-        $chartLabels = $dailyStats->map(function($stat) {
+        $chartLabels = $dailyStats->map(function ($stat) {
             return Carbon::parse($stat->date)->translatedFormat('D, d M');
         })->toArray();
 

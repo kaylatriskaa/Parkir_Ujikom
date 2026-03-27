@@ -9,60 +9,48 @@ use App\Models\Area;
 use App\Models\Transaksi;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 
 class AdminController extends Controller
 {
     public function index()
     {
-        // 1. Ambil data petugas & owner (Kecuali admin yang sedang login)
         $users = User::whereIn('role', ['petugas', 'owner'])
-                    ->where('id', '!=', Auth::id())
+                    ->where('id_user', '!=', Auth::id())
                     ->get();
 
-        // 2. Ambil data tarif & area
         $tarifs = Tarif::all();
+        $areas = Area::all();
 
-        // Safety: Pastikan slot_tersedia tidak melebihi kapasitas saat ditampilkan
-        $areas = Area::all()->map(function($area) {
-            if ($area->slot_tersedia > $area->kapasitas) {
-                $area->slot_tersedia = $area->kapasitas;
-            }
-            return $area;
-        });
-
-        // 3. Ambil log aktivitas terbaru
-        // Gunakan try-catch agar tidak crash jika tabel transaksi belum ada/kosong
         try {
-            $logs = Transaksi::with(['user', 'area'])->latest()->take(10)->get();
+            $logs = Transaksi::with(['kendaraan', 'area', 'user'])->latest('waktu_masuk')->take(10)->get();
         } catch (\Exception $e) {
             $logs = collect();
         }
 
-        // 4. Hitung total logs khusus hari ini untuk card statistik
-        $totalLogsCount = Transaksi::whereDate('created_at', today())->count();
+        $totalLogsCount = Transaksi::whereDate('waktu_masuk', today())->count();
 
         return view('dashboards.admin', compact('users', 'tarifs', 'areas', 'logs', 'totalLogsCount'));
     }
 
     // --- MANAJEMEN USER ---
+
     public function store(Request $request)
     {
         $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
+            'nama_lengkap' => 'required|string|max:100',
+            'username' => 'required|string|max:50|unique:tb_user,username',
             'password' => 'required|string|min:6',
-            'role' => 'required|in:petugas,owner'
+            'role' => 'required|in:petugas,owner',
         ]);
 
         User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
+            'nama_lengkap' => $request->nama_lengkap,
+            'username' => $request->username,
+            'password' => md5($request->password),
             'role' => $request->role,
         ]);
 
-        return redirect()->back()->with('success', 'Akun ' . $request->name . ' berhasil dibuat!');
+        return redirect()->back()->with('success', 'Akun ' . $request->nama_lengkap . ' berhasil dibuat!');
     }
 
     public function update(Request $request, $id)
@@ -70,18 +58,18 @@ class AdminController extends Controller
         $user = User::findOrFail($id);
 
         $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email,' . $id,
-            'role' => 'required|in:petugas,owner'
+            'nama_lengkap' => 'required|string|max:100',
+            'username' => 'required|string|max:50|unique:tb_user,username,' . $id . ',id_user',
+            'role' => 'required|in:petugas,owner',
         ]);
 
-        $user->name = $request->name;
-        $user->email = $request->email;
+        $user->nama_lengkap = $request->nama_lengkap;
+        $user->username = $request->username;
         $user->role = $request->role;
 
         if ($request->filled('password')) {
             $request->validate(['password' => 'min:6']);
-            $user->password = Hash::make($request->password);
+            $user->password = md5($request->password);
         }
 
         $user->save();
@@ -93,7 +81,7 @@ class AdminController extends Controller
     {
         $user = User::findOrFail($id);
 
-        if ($user->id === Auth::id()) {
+        if ($user->id_user === Auth::id()) {
             return redirect()->back()->with('error', 'Dilarang menghapus akun sendiri!');
         }
 
@@ -101,46 +89,47 @@ class AdminController extends Controller
         return redirect()->back()->with('success', 'User berhasil dihapus!');
     }
 
+    public function toggleStatus($id)
+    {
+        $user = User::findOrFail($id);
+        $user->status_aktif = !$user->status_aktif;
+        $user->save();
+
+        return back()->with('success', 'Status user berhasil diubah!');
+    }
+
     // --- MANAJEMEN TARIF ---
+
     public function updateTarif(Request $request, $id)
     {
         $request->validate([
-            'harga_per_jam' => 'required|numeric|min:0',
+            'tarif_per_jam' => 'required|numeric|min:0',
         ]);
 
         $tarif = Tarif::findOrFail($id);
         $tarif->update([
-            'harga_per_jam' => $request->harga_per_jam,
+            'tarif_per_jam' => $request->tarif_per_jam,
         ]);
 
         return redirect()->back()->with('success', 'Tarif ' . $tarif->jenis_kendaraan . ' berhasil diubah!');
     }
 
-    // --- MANAJEMEN AREA (Opsional jika ingin reset manual lewat tombol) ---
-    public function resetArea($id)
+    // --- MANAJEMEN AREA ---
+
+    public function updateArea(Request $request, $id)
     {
-        // Menggunakan primary key area_id sesuai database kamu
-        $area = Area::where('area_id', $id)->firstOrFail();
-        $area->update([
-            'slot_tersedia' => $area->kapasitas
+        $area = Area::findOrFail($id);
+
+        $request->validate([
+            'nama_area' => 'required|string|max:100',
+            'kapasitas' => 'required|integer|min:1',
         ]);
 
-        return redirect()->back()->with('success', 'Area ' . $area->nama_area . ' berhasil dikosongkan!');
+        $area->update([
+            'nama_area' => $request->nama_area,
+            'kapasitas' => $request->kapasitas,
+        ]);
+
+        return redirect()->back()->with('success', 'Area ' . $area->nama_area . ' berhasil diperbarui!');
     }
-
- public function toggleStatus($id) {
-    $user = \App\Models\User::findOrFail($id);
-    $user->is_active = !$user->is_active;
-    $user->save(); // Baris ini tidak akan error lagi kalau langkah nomor 1 sudah sukses
-
-    return back()->with('success', 'Status user berhasil diubah!');
-}
-
-public function toggleArea($id) {
-    $area = \App\Models\Area::findOrFail($id);
-    $area->is_active = !$area->is_active;
-    $area->save();
-
-    return back()->with('success', 'Status Area berhasil diubah!');
-}
 }

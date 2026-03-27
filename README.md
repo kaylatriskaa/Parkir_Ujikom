@@ -1,59 +1,200 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# 🅿️ PARKIEST — Smart Parking Management System
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+> Sistem Manajemen Parkir berbasis web untuk UKK (Ujian Kompetensi Keahlian)
+> Dibangun dengan **Laravel 12**, **MySQL**, **Tailwind CSS**, **Alpine.js**, dan **Chart.js**
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## 📋 Fitur Utama
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+| Role | Fitur |
+|------|-------|
+| **Admin** | Kelola akun user (CRUD), atur tarif parkir, monitoring area parkir |
+| **Petugas** | Input kendaraan masuk/keluar, cetak karcis, riwayat transaksi, denah slot |
+| **Owner** | Laporan pendapatan, grafik Chart.js, filter periode, monitoring traffic |
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### Fitur Tambahan
+- 🔐 Login multi-role dengan keamanan RBAC (Role-Based Access Control)
+- 🖨️ Cetak karcis/struk otomatis (thermal printer 80mm)
+- ⏱️ Perhitungan biaya otomatis berdasarkan durasi parkir
+- 📊 Grafik pendapatan 7 hari terakhir
+- 🅿️ Visualisasi slot parkir real-time (grid hijau/merah)
+- 📅 Filter data berdasarkan tanggal
+- 🔄 Status akun aktif/nonaktif tanpa hapus data
 
-## Learning Laravel
+---
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+## 🗄️ Struktur Database
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+**Nama Database**: `ukk_parkir`
 
-## Laravel Sponsors
+| No | Tabel | Keterangan |
+|----|-------|------------|
+| 1 | `tb_user` | Data pengguna (admin, petugas, owner) |
+| 2 | `tb_tarif` | Tarif parkir per jenis kendaraan |
+| 3 | `tb_area_parkir` | Area/zona parkir + kapasitas |
+| 4 | `tb_kendaraan` | Identitas kendaraan (plat, jenis, warna) |
+| 5 | `tb_transaksi` | Transaksi parkir (masuk/keluar/biaya) |
+| 6 | `tb_log_aktivitas` | Log aktivitas user |
+| 7 | `tb_log` | Log tambahan sistem |
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+---
 
-### Premium Partners
+## 🚀 Cara Setup & Menjalankan Projek
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+### Prasyarat
+Pastikan sudah terinstall:
+- **PHP** >= 8.2
+- **Composer** (package manager PHP)
+- **Node.js** + **NPM** (untuk build frontend)
+- **MySQL** (bisa pakai DBngin, XAMPP, MAMP, atau install langsung)
+- **Git** (untuk clone)
 
-## Contributing
+### Langkah 1 — Clone Repository
+```bash
+git clone <URL_REPOSITORY>
+cd Parkir_Ujikom
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+### Langkah 2 — Install Dependencies
+```bash
+composer install
+npm install
+```
 
-## Code of Conduct
+### Langkah 3 — Setup Environment
+```bash
+cp .env.example .env
+php artisan key:generate
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+### Langkah 4 — Konfigurasi Database
+Buka file `.env` lalu sesuaikan konfigurasi database:
+```env
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=ukk_parkir
+DB_USERNAME=root
+DB_PASSWORD=
+```
+> ⚠️ Sesuaikan `DB_PORT`, `DB_USERNAME`, dan `DB_PASSWORD` dengan konfigurasi MySQL kamu.
 
-## Security Vulnerabilities
+### Langkah 5 — Buat Database & Import Schema
+1. Buat database baru bernama **`ukk_parkir`** (bisa lewat Sequel Ace, phpMyAdmin, atau terminal)
+2. Import file `schema.sql` yang ada di root projek:
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+**Via Terminal:**
+```bash
+mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS ukk_parkir"
+mysql -u root -p ukk_parkir < schema.sql
+```
 
-## License
+**Via Sequel Ace / phpMyAdmin:**
+- Buat database `ukk_parkir`
+- Buka file `schema.sql`, copy semua isinya
+- Paste di query editor, lalu Run/Execute
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+### Langkah 6 — Build Frontend Assets
+```bash
+npm run build
+```
+
+### Langkah 7 — Jalankan Server
+```bash
+php artisan serve
+```
+Buka browser: **http://127.0.0.1:8000**
+
+---
+
+## 🔑 Akun Default
+
+| Username | Password | Role |
+|----------|----------|------|
+| `admin` | `admin123` | Admin |
+| `petugas` | `admin123` | Petugas |
+| `owner` | `admin123` | Owner |
+
+---
+
+## 📁 Struktur Projek (File Penting)
+
+```
+Parkir_Ujikom/
+├── app/
+│   ├── Http/
+│   │   ├── Controllers/
+│   │   │   ├── Admin/AdminController.php      # Logika admin (CRUD user, tarif)
+│   │   │   ├── Auth/AuthenticatedSession...   # Logika login/logout
+│   │   │   ├── Owner/OwnerController.php      # Logika owner (laporan)
+│   │   │   └── Petugas/PetugasController.php  # Logika petugas (parkir)
+│   │   ├── Middleware/
+│   │   │   └── CheckRole.php                  # Middleware RBAC
+│   │   └── Requests/Auth/
+│   │       └── LoginRequest.php               # Validasi & proses login MD5
+│   └── Models/
+│       ├── User.php                           # Model tb_user
+│       ├── Tarif.php                          # Model tb_tarif
+│       ├── Area.php                           # Model tb_area_parkir
+│       ├── Kendaraan.php                      # Model tb_kendaraan
+│       ├── Transaksi.php                      # Model tb_transaksi
+│       └── LogAktivitas.php                   # Model tb_log_aktivitas
+├── resources/views/
+│   ├── auth/login.blade.php                   # Halaman login
+│   ├── dashboards/
+│   │   ├── admin.blade.php                    # Dashboard admin
+│   │   ├── petugas.blade.php                  # Dashboard petugas
+│   │   └── owner.blade.php                    # Dashboard owner
+│   └── petugas/cetak.blade.php                # Cetak karcis
+├── routes/web.php                             # Peta URL aplikasi
+├── schema.sql                                 # Query lengkap database
+├── materi.txt                                 # Materi penjelasan projek
+├── materi_presentasi.txt                      # Panduan presentasi + kode
+├── .env                                       # Konfigurasi environment
+└── README.md                                  # File ini
+```
+
+---
+
+## 🛠️ Teknologi
+
+| Kategori | Teknologi |
+|----------|-----------|
+| Backend | PHP 8.4, Laravel 12 |
+| Database | MySQL / MariaDB |
+| Frontend | Blade Template, Tailwind CSS |
+| Interaktivitas | Alpine.js |
+| Grafik | Chart.js |
+| Build Tool | Vite |
+| Icon | Font Awesome 6 |
+
+---
+
+## 📝 Rekap Perubahan yang Dilakukan
+
+### Perbaikan Bug & Restructuring
+- ✅ Seluruh projek di-restructure untuk schema UKK `ukk_parkir`
+- ✅ Tabel `users` → `tb_user` dengan kolom baru (nama_lengkap, username, status_aktif)
+- ✅ Tabel `tarifs` → `tb_tarif` dengan kolom `tarif_per_jam`
+- ✅ Tabel `area_parkirs` → `tb_area_parkir` dengan logika `terisi` (bukan slot_tersedia)
+- ✅ Tabel baru `tb_kendaraan` untuk memisahkan data kendaraan dari transaksi
+- ✅ Tabel `transaksis` → `tb_transaksi` dengan kolom baru (id_parkir, durasi_jam, biaya_total)
+- ✅ Sistem login diubah dari email+bcrypt ke username+MD5
+
+### Keamanan
+- ✅ Middleware RBAC (`CheckRole`) untuk kontrol akses per role
+- ✅ Rate limiting pada login (blokir setelah 5x gagal)
+- ✅ CSRF protection di semua form
+- ✅ Mass assignment protection di semua model ($fillable)
+
+### Pembersihan
+- ✅ Hapus file tidak terpakai (TarifController, UserController, iniproject.zip)
+- ✅ Bersihkan komentar berlebihan dan rapikan indentasi
+- ✅ Session driver diubah ke `file` (tidak perlu tabel sessions)
+
+---
+
+## 📄 Lisensi
+
+Projek ini dibuat untuk keperluan **UKK (Ujian Kompetensi Keahlian)**.

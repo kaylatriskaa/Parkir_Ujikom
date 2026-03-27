@@ -112,38 +112,16 @@
         }
 
         @keyframes carDrive {
-            0% {
-                right: -150px;
-            }
-
-            30% {
-                right: 180px;
-            }
-
-            60% {
-                right: 180px;
-            }
-
-            100% {
-                right: 110%;
-            }
+            0% { right: -150px; }
+            30% { right: 180px; }
+            60% { right: 180px; }
+            100% { right: 110%; }
         }
 
         @keyframes armRaise {
-
-            0%,
-            55% {
-                transform: rotate(60deg);
-            }
-
-            65%,
-            90% {
-                transform: rotate(-90deg);
-            }
-
-            100% {
-                transform: rotate(60deg);
-            }
+            0%, 55% { transform: rotate(60deg); }
+            65%, 90% { transform: rotate(-90deg); }
+            100% { transform: rotate(60deg); }
         }
     </style>
 
@@ -152,7 +130,7 @@
         <div class="grid md:grid-cols-2">
 
             <div class="p-12 bg-white">
-                <h1 class="text-3xl font-black text-slate-800 mb-8 tracking-tight">PARKIEST</span></h1>
+                <h1 class="text-3xl font-black text-slate-800 mb-8 tracking-tight">PARKIEST</h1>
 
                 <div class="scene">
                     <div class="road"></div>
@@ -169,9 +147,17 @@
                 <h2 class="text-6xl font-black text-white mb-2 drop-shadow-sm">WELCOME!</h2>
                 <p class="text-orange-900/40 font-bold text-xs uppercase tracking-widest mb-10">PARKIEST - Smart Parking Management System</p>
 
+                @if ($errors->any())
+                    <div class="bg-red-100 border border-red-300 text-red-700 px-4 py-3 rounded-2xl mb-4 text-sm font-bold">
+                        @foreach ($errors->all() as $error)
+                            <p>{{ $error }}</p>
+                        @endforeach
+                    </div>
+                @endif
+
                 <form method="POST" action="{{ route('login') }}" class="space-y-4 text-left">
                     @csrf
-                    <input type="email" name="email" placeholder="Email Address" required
+                    <input type="text" name="username" placeholder="Username" required value="{{ old('username') }}"
                         class="w-full px-6 py-4 rounded-2xl border-none bg-white/90 focus:ring-4 focus:ring-orange-200 transition-all text-slate-700">
 
                     <input type="password" name="password" placeholder="Password" required

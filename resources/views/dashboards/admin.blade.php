@@ -6,7 +6,7 @@
         showModal: false,
         showEditModal: false,
         showTarifModal: false,
-        editData: { id: '', name: '', email: '', role: '' },
+        editData: { id: '', name: '', username: '', role: '' },
         tarifData: { id: '', jenis: '', harga: '' },
         editAction: '',
         tarifAction: ''
@@ -21,7 +21,7 @@
             <div class="flex items-center gap-6">
                 <div class="text-right hidden md:block">
                     <p class="text-[10px] font-black text-orange-400 uppercase tracking-widest leading-none mb-1">Admin Aktif</p>
-                    <p class="font-bold text-gray-800 italic">{{ auth()->user()->name }}</p>
+                    <p class="font-bold text-gray-800 italic">{{ auth()->user()->nama_lengkap }}</p>
                 </div>
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
@@ -84,27 +84,27 @@
                             <tr class="hover:bg-amber-50/30 transition-colors">
                                 <td class="px-8 py-6">
                                     <div class="flex flex-col">
-                                        <span class="font-bold text-gray-800">{{ $user->name }}</span>
-                                        <span class="text-xs text-gray-400">{{ $user->email }}</span>
+                                        <span class="font-bold text-gray-800">{{ $user->nama_lengkap }}</span>
+                                        <span class="text-xs text-gray-400">{{ $user->username }}</span>
                                     </div>
                                 </td>
                                 <td class="px-8 py-6 text-center">
                                     <span class="px-3 py-1 rounded-full bg-white text-gray-600 text-[10px] font-black uppercase tracking-widest border border-gray-200">{{ $user->role }}</span>
                                 </td>
                                 <td class="px-8 py-6 text-center">
-                                    <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase {{ $user->is_active ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600' }}">
-                                        {{ $user->is_active ? 'Aktif' : 'Nonaktif' }}
+                                    <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase {{ $user->status_aktif ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600' }}">
+                                        {{ $user->status_aktif ? 'Aktif' : 'Nonaktif' }}
                                     </span>
                                 </td>
                                 <td class="px-8 py-6 text-right">
                                     <div class="flex justify-end gap-3">
-                                        <form action="{{ route('admin.users.toggle', $user->id) }}" method="POST">
+                                        <form action="{{ route('admin.users.toggle', $user->id_user) }}" method="POST">
                                             @csrf @method('PATCH')
-                                            <button type="submit" class="w-10 h-10 flex items-center justify-center rounded-xl transition-all shadow-sm {{ $user->is_active ? 'bg-red-50 text-red-500 hover:bg-red-500 hover:text-white' : 'bg-green-50 text-green-500 hover:bg-green-500 hover:text-white' }}">
-                                                <i class="fas {{ $user->is_active ? 'fa-user-slash' : 'fa-user-check' }}"></i>
+                                            <button type="submit" class="w-10 h-10 flex items-center justify-center rounded-xl transition-all shadow-sm {{ $user->status_aktif ? 'bg-red-50 text-red-500 hover:bg-red-500 hover:text-white' : 'bg-green-50 text-green-500 hover:bg-green-500 hover:text-white' }}">
+                                                <i class="fas {{ $user->status_aktif ? 'fa-user-slash' : 'fa-user-check' }}"></i>
                                             </button>
                                         </form>
-                                        <button @click="showEditModal = true; editData = { id: '{{ $user->id }}', name: '{{ $user->name }}', email: '{{ $user->email }}', role: '{{ $user->role }}' }; editAction = '/admin/users/{{ $user->id }}'" class="w-10 h-10 flex items-center justify-center rounded-xl bg-amber-50 text-amber-500 hover:bg-amber-500 hover:text-white transition-all shadow-sm">
+                                        <button @click="showEditModal = true; editData = { id: '{{ $user->id_user }}', name: '{{ $user->nama_lengkap }}', username: '{{ $user->username }}', role: '{{ $user->role }}' }; editAction = '/admin/users/{{ $user->id_user }}'" class="w-10 h-10 flex items-center justify-center rounded-xl bg-amber-50 text-amber-500 hover:bg-amber-500 hover:text-white transition-all shadow-sm">
                                             <i class="fas fa-edit"></i>
                                         </button>
                                     </div>
@@ -126,9 +126,9 @@
                         <div class="flex items-center justify-between p-5 bg-[#FFF9F2] rounded-3xl border border-amber-100 group hover:border-amber-400 transition-all">
                             <div>
                                 <p class="text-[10px] font-black text-amber-600 uppercase tracking-widest">{{ $tarif->jenis_kendaraan }}</p>
-                                <p class="text-xl font-bold text-gray-800">Rp {{ number_format($tarif->harga_per_jam, 0, ',', '.') }}<span class="text-xs text-gray-400 font-normal">/jam</span></p>
+                                <p class="text-xl font-bold text-gray-800">Rp {{ number_format($tarif->tarif_per_jam, 0, ',', '.') }}<span class="text-xs text-gray-400 font-normal">/jam</span></p>
                             </div>
-                            <button @click="showTarifModal = true; tarifData = { id: '{{ $tarif->id }}', jenis: '{{ $tarif->jenis_kendaraan }}', harga: '{{ $tarif->harga_per_jam }}' }; tarifAction = '/admin/tarifs/{{ $tarif->id }}'" class="bg-white p-3 rounded-2xl shadow-sm text-amber-500 hover:bg-amber-400 hover:text-white transition-all border border-amber-50">
+                            <button @click="showTarifModal = true; tarifData = { id: '{{ $tarif->id_tarif }}', jenis: '{{ $tarif->jenis_kendaraan }}', harga: '{{ $tarif->tarif_per_jam }}' }; tarifAction = '/admin/tarifs/{{ $tarif->id_tarif }}'" class="bg-white p-3 rounded-2xl shadow-sm text-amber-500 hover:bg-amber-400 hover:text-white transition-all border border-amber-50">
                                 <i class="fas fa-pencil-alt"></i>
                             </button>
                         </div>
@@ -142,15 +142,15 @@
                 <div class="space-y-8">
                     @foreach ($areas as $area)
                         @php
-                            $terpakai = $area->kapasitas - $area->slot_tersedia;
-                            $persenTerisi = ($terpakai / max(1, $area->kapasitas)) * 100;
+                            $persenTerisi = ($area->terisi / max(1, $area->kapasitas)) * 100;
+                            $slotKosong = $area->kapasitas - $area->terisi;
                             $barColor = $persenTerisi > 85 ? 'bg-red-500' : ($persenTerisi > 50 ? 'bg-orange-500' : 'bg-emerald-500');
                         @endphp
                         <div class="mb-6">
                             <div class="flex justify-between items-end mb-2">
                                 <div>
                                     <p class="text-sm font-bold text-gray-200">{{ $area->nama_area }}</p>
-                                    <p class="text-[10px] text-gray-400 uppercase font-black">{{ $area->slot_tersedia }} Slot Kosong / {{ $area->kapasitas }} Total</p>
+                                    <p class="text-[10px] text-gray-400 uppercase font-black">{{ $slotKosong }} Slot Kosong / {{ $area->kapasitas }} Total</p>
                                 </div>
                                 <div class="text-right">
                                     <span class="text-lg font-black {{ $persenTerisi > 90 ? 'text-red-400' : 'text-amber-400' }}">{{ round($persenTerisi) }}%</span>
@@ -159,7 +159,7 @@
                             <div class="w-full bg-gray-700 rounded-full h-3 overflow-hidden shadow-inner">
                                 <div class="{{ $barColor }} h-full transition-all duration-500 ease-out" style="width: {{ $persenTerisi }}%"></div>
                             </div>
-                            <p class="text-[9px] mt-1 text-gray-500 italic font-bold uppercase tracking-wider">{{ $terpakai }} Kendaraan Terparkir</p>
+                            <p class="text-[9px] mt-1 text-gray-500 italic font-bold uppercase tracking-wider">{{ $area->terisi }} Kendaraan Terparkir</p>
                         </div>
                     @endforeach
                 </div>
@@ -176,11 +176,11 @@
                         @csrf
                         <div>
                             <label class="block text-[10px] font-black text-amber-600 uppercase mb-2 ml-2 tracking-widest">Nama Lengkap</label>
-                            <input type="text" name="name" required class="w-full px-5 py-4 rounded-2xl bg-amber-50 border-none focus:ring-2 focus:ring-amber-400 font-bold">
+                            <input type="text" name="nama_lengkap" required class="w-full px-5 py-4 rounded-2xl bg-amber-50 border-none focus:ring-2 focus:ring-amber-400 font-bold">
                         </div>
                         <div>
-                            <label class="block text-[10px] font-black text-amber-600 uppercase mb-2 ml-2 tracking-widest">Email Address</label>
-                            <input type="email" name="email" required class="w-full px-5 py-4 rounded-2xl bg-amber-50 border-none focus:ring-2 focus:ring-amber-400 font-bold">
+                            <label class="block text-[10px] font-black text-amber-600 uppercase mb-2 ml-2 tracking-widest">Username</label>
+                            <input type="text" name="username" required class="w-full px-5 py-4 rounded-2xl bg-amber-50 border-none focus:ring-2 focus:ring-amber-400 font-bold">
                         </div>
                         <div>
                             <label class="block text-[10px] font-black text-amber-600 uppercase mb-2 ml-2 tracking-widest">Role</label>
@@ -212,11 +212,11 @@
                         @csrf @method('PUT')
                         <div>
                             <label class="block text-[10px] font-black text-amber-600 uppercase mb-2 ml-2 tracking-widest">Nama Lengkap</label>
-                            <input type="text" name="name" x-model="editData.name" required class="w-full px-5 py-4 rounded-2xl bg-amber-50 border-none focus:ring-2 focus:ring-amber-400 font-bold">
+                            <input type="text" name="nama_lengkap" x-model="editData.name" required class="w-full px-5 py-4 rounded-2xl bg-amber-50 border-none focus:ring-2 focus:ring-amber-400 font-bold">
                         </div>
                         <div>
-                            <label class="block text-[10px] font-black text-amber-600 uppercase mb-2 ml-2 tracking-widest">Email Address</label>
-                            <input type="email" name="email" x-model="editData.email" required class="w-full px-5 py-4 rounded-2xl bg-amber-50 border-none focus:ring-2 focus:ring-amber-400 font-bold">
+                            <label class="block text-[10px] font-black text-amber-600 uppercase mb-2 ml-2 tracking-widest">Username</label>
+                            <input type="text" name="username" x-model="editData.username" required class="w-full px-5 py-4 rounded-2xl bg-amber-50 border-none focus:ring-2 focus:ring-amber-400 font-bold">
                         </div>
                         <div>
                             <label class="block text-[10px] font-black text-amber-600 uppercase mb-2 ml-2 tracking-widest">Role</label>
@@ -248,7 +248,7 @@
                         </div>
                         <div>
                             <label class="block text-[10px] font-black text-amber-600 uppercase mb-2 ml-2 tracking-widest">Harga per Jam</label>
-                            <input type="number" name="harga_per_jam" x-model="tarifData.harga" required class="w-full px-5 py-4 rounded-2xl bg-amber-50 border-none focus:ring-2 focus:ring-amber-400 font-bold">
+                            <input type="number" name="tarif_per_jam" x-model="tarifData.harga" required class="w-full px-5 py-4 rounded-2xl bg-amber-50 border-none focus:ring-2 focus:ring-amber-400 font-bold">
                         </div>
                         <div class="flex gap-3 pt-6">
                             <button type="button" @click="showTarifModal = false" class="flex-1 py-4 font-black text-gray-400 uppercase text-xs">Batal</button>
